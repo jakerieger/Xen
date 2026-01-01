@@ -11,7 +11,6 @@
 #include "xtable.h"
 #include "xutils.h"
 #include "xvalue.h"
-#include "xstd.h"
 #include "xbuiltin.h"
 
 //====================================================================================================================//
@@ -121,15 +120,6 @@ static bool call_value(xen_value callee, i32 arg_count) {
 
 //====================================================================================================================//
 
-static void define_native_fn(const char* name, xen_native_fn fn) {
-    xen_obj_str* str = xen_obj_str_copy(name, strlen(name));
-    stack_push(OBJ_VAL(str));
-    stack_push(OBJ_VAL(xen_obj_native_func_new(fn, name)));
-    xen_table_set(&g_vm.globals, OBJ_AS_STRING(g_vm.stack[0]), g_vm.stack[1]);
-    stack_pop();
-    stack_pop();
-}
-
 //====================================================================================================================//
 
 void xen_vm_init(xen_vm_config config) {
@@ -138,12 +128,7 @@ void xen_vm_init(xen_vm_config config) {
     g_vm.objects = NULL;
     xen_table_init(&g_vm.globals);
     xen_table_init(&g_vm.strings);
-    xen_table_init(&g_vm.namespace_registry);
-
-    // define native functions in global namespace
-    define_native_fn("typeof", xstd_typeof);
-
-    // register built in namespaces
+    xen_table_init(&g_vm.namespace_registry);  // register built in namespaces
     xen_builtins_register();
 }
 

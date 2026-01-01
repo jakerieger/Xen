@@ -7,6 +7,8 @@
 void xen_builtins_register();
 void xen_vm_register_namespace(const char* name, xen_value ns);
 
+void xen_builtin_global();
+
 xen_obj_namespace* xen_builtin_math();
 xen_obj_namespace* xen_builtin_io();
 xen_obj_namespace* xen_builtin_string();

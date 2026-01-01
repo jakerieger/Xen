@@ -3,12 +3,56 @@
 #include <ctype.h>
 #include <time.h>
 
+static void define_native_fn(const char* name, xen_native_fn fn) {
+    xen_obj_str* str = xen_obj_str_copy(name, strlen(name));
+    xen_table_set(&g_vm.globals, OBJ_AS_STRING(g_vm.stack[0]), g_vm.stack[1]);
+}
+
+xen_value xen_builtin_typeof(i32 arg_count, xen_value* args) {
+    if (arg_count != 1) {
+        return NULL_VAL;
+    }
+
+    xen_value val = args[0];
+    const char* type_str;
+
+    if (VAL_IS_BOOL(val)) {
+        type_str = "bool";
+    } else if (VAL_IS_NULL(val)) {
+        type_str = "null";
+    } else if (VAL_IS_NUMBER(val)) {
+        type_str = "number";
+    } else if (VAL_IS_OBJ(val)) {
+        switch (OBJ_TYPE(val)) {
+            case OBJ_STRING:
+                type_str = "string";
+                break;
+            case OBJ_FUNCTION:
+                type_str = "function";
+                break;
+            case OBJ_NATIVE_FUNC:
+                type_str = "native_function";
+                break;
+            default:
+                type_str = "undefined";
+                break;
+        }
+    } else {
+        type_str = "undefined";
+    }
+
+    return OBJ_VAL(xen_obj_str_copy(type_str, strlen(type_str)));
+}
+
 void xen_builtins_register() {
     srand((u32)time(NULL));
     xen_vm_register_namespace("math", OBJ_VAL(xen_builtin_math()));
     xen_vm_register_namespace("io", OBJ_VAL(xen_builtin_io()));
     xen_vm_register_namespace("string", OBJ_VAL(xen_builtin_string()));
     xen_vm_register_namespace("datetime", OBJ_VAL(xen_builtin_datetime()));
+
+    /* register globals */
+    define_native_fn("typeof", xen_builtin_typeof);
 }
 
 void xen_vm_register_namespace(const char* name, xen_value ns) {
