@@ -1,9 +1,25 @@
 # Changelog
 
 ## Table of Contents
+- [v0.4.0](#v040-january-3-2026)
 - [v0.3.0](#v030-january-2-2026)
 - [v0.2.0](#v020-january-2-2026)
 - [v0.1.0](#v010-january-1-2026)
+
+## v0.4.0 (January 3, 2026)
+
+### Added
+- Added additional methods to the `io` namespace for file reading/writing.
+
+### Changed
+- Array literals have a max size of 256 elements. Arrays can be dynamically resized to any size (up to your memory limit of course).
+
+### Removed
+Nothing.
+
+### Fixed
+- Large numbers would print in scientific notation instead of displaying all digits. This was caused by the use of `%g` instead of `%f` in the corresponding `printf` call (see [xvalue.c](https://github.com/jakerieger/Xen/blob/master/src/xvalue.c#L94)).
+
 
 ## v0.3.0 (January 2, 2026)
 
