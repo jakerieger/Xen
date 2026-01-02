@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.0 (December 30, 2025)
+## v0.1.0 (January 1, 2026)
 
 The core foundation of the language has been implemented. Minor bug testing has taken place and most of the breaking bugs have been
 worked out. This puts Xen in a very exciting position with many new updates on their way.

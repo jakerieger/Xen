@@ -13,9 +13,11 @@ InstallDir "$PROGRAMFILES\Xen"
 !insertmacro MUI_LANGUAGE "English"
 
 Section "Install"
-    SetOutPath $INSTDIR
-    File "../bin_win/xen.exe"
+    SetOutPath "$INSTDIR"
     File "../README.md"
     File "../LICENSE"
+    SetOutPath "$INSTDIR/bin"
+    File "../bin_win/xen.exe"
+    SetOutPath "$INSTDIR/examples"
     File "../examples/"
 SectionEnd
