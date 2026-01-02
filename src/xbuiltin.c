@@ -1,14 +1,17 @@
 #include "xbuiltin.h"
 #include "xcommon.h"
+#include "xerr.h"
+#include "xobject.h"
+#include "xvalue.h"
 #include <ctype.h>
 #include <time.h>
 
 static void define_native_fn(const char* name, xen_native_fn fn) {
-    xen_obj_str* str = xen_obj_str_copy(name, strlen(name));
-    xen_table_set(&g_vm.globals, OBJ_AS_STRING(g_vm.stack[0]), g_vm.stack[1]);
+    xen_obj_str* key = xen_obj_str_copy(name, strlen(name));
+    xen_table_set(&g_vm.globals, key, OBJ_VAL(xen_obj_native_func_new(fn, name)));
 }
 
-xen_value xen_builtin_typeof(i32 arg_count, xen_value* args) {
+static xen_value xen_builtin_typeof(i32 arg_count, xen_value* args) {
     if (arg_count != 1) {
         return NULL_VAL;
     }
@@ -370,6 +373,55 @@ static xen_value string_ends_with(i32 argc, xen_value* args) {
     return BOOL_VAL(memcmp(start, suffix->str, suffix->length) == 0);
 }
 
+static xen_value string_join(i32 argc, xen_value* args) {
+    if (argc <= 1) {
+        xen_runtime_error("string.join() requires at least two arguments.");
+        return NULL_VAL;
+    }
+
+    size_t size_needed = 0;
+    for (int i = 0; i < argc; i++) {
+        xen_value val = args[i];
+        if (!OBJ_IS_STRING(val)) {
+            xen_runtime_error("all arguments of string.join() must be strings");
+            return NULL_VAL;
+        }
+        size_needed += OBJ_AS_STRING(val)->length;
+    }
+
+    char* buffer = (char*)malloc(size_needed + 1);
+    if (!buffer) {
+        xen_runtime_error("couldn't allocate string buffer for joining");
+        return NULL_VAL;
+    }
+
+    int offset = 0;
+    for (int i = 0; i < argc; i++) {
+        if (offset > size_needed) {
+            xen_runtime_error("offset > buffer size in string join buffer");
+            break;
+        }
+        xen_obj_str* val = OBJ_AS_STRING(args[i]);
+        memcpy(buffer + offset, val->str, val->length);
+        offset += val->length;
+    }
+
+    buffer[size_needed] = '\0';
+    xen_value out       = OBJ_VAL(xen_obj_str_take(buffer, size_needed + 1));
+
+    return out;
+}
+
+static xen_value string_at(i32 argc, xen_value* args) {
+    /* TODO: */
+    return NULL_VAL;
+}
+
+static xen_value string_format(i32 argc, xen_value* args) {
+    /* TODO: */
+    return NULL_VAL;
+}
+
 xen_obj_namespace* xen_builtin_string() {
     xen_obj_namespace* str = xen_obj_namespace_new("string");
     xen_obj_namespace_set(str, "len", OBJ_VAL(xen_obj_native_func_new(string_len, "len")));
@@ -381,6 +433,9 @@ xen_obj_namespace* xen_builtin_string() {
     xen_obj_namespace_set(str, "contains", OBJ_VAL(xen_obj_native_func_new(string_contains, "contains")));
     xen_obj_namespace_set(str, "starts_with", OBJ_VAL(xen_obj_native_func_new(string_starts_with, "starts_with")));
     xen_obj_namespace_set(str, "ends_with", OBJ_VAL(xen_obj_native_func_new(string_ends_with, "ends_with")));
+    xen_obj_namespace_set(str, "join", OBJ_VAL(xen_obj_native_func_new(string_join, "join")));
+    // xen_obj_namespace_set(str, "at", OBJ_VAL(xen_obj_native_func_new(string_at, "at")));
+    // xen_obj_namespace_set(str, "format", OBJ_VAL(xen_obj_native_func_new(string_format, "format")));
     return str;
 }
 
