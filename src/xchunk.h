@@ -36,6 +36,7 @@ typedef enum {
     OP_ARRAY_NEW,
     OP_ARRAY_GET,
     OP_ARRAY_SET,
+    OP_ARRAY_LEN,
 } xen_opcode;
 
 typedef struct {

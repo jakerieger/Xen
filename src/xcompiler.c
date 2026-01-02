@@ -1052,73 +1052,171 @@ static void for_statement() {
                 advance(); /* consume identifier */
 
                 if (check(TOKEN_IN)) {
-                    /* It's a for-in loop: for (var i in start..end) */
+                    /* It's a for-in loop: for (var i in start..end) OR for (var x in array) */
                     /* We've already consumed '(', 'var', and the identifier */
-                    /* Now consume 'in' and continue */
-
-                    /* But we need to backtrack our parsing state... */
-                    /* This is tricky. Let's restructure. */
-
-                    /* Actually, let's handle it inline here since we've already parsed */
                     xen_token loop_var = parser.previous; /* the identifier */
 
                     begin_scope();
 
-                    /* declare the loop variable */
-                    add_local(loop_var);
-
                     consume(TOKEN_IN, "expected 'in' after loop variable");
 
-                    /* compile start expression and initialize loop variable */
-                    expression();
-                    mark_initialized();
-                    u8 loop_var_slot = (u8)(current->local_count - 1);
-
-                    consume(TOKEN_DOT_DOT, "expected '..' in range");
-
-                    /* compile end expression into a hidden local */
+                    /* Parse the expression after 'in' */
                     expression();
 
-                    /* create hidden __end variable */
-                    xen_token end_token;
-                    end_token.start  = "__end";
-                    end_token.length = 5;
-                    end_token.line   = parser.previous.line;
-                    end_token.type   = TOKEN_IDENTIFIER;
-                    add_local(end_token);
-                    mark_initialized();
-                    u8 end_var_slot = (u8)(current->local_count - 1);
+                    /* Now check: is this a range (has ..) or an array iteration? */
+                    if (match_token(TOKEN_DOT_DOT)) {
+                        /* ============================================
+                         * RANGE-BASED FOR LOOP: for (var i in start..end)
+                         * ============================================
+                         * Desugars to:
+                         *   var i = start;
+                         *   var __end = end;
+                         *   while (i < __end) { body; i = i + 1; }
+                         */
 
-                    consume(TOKEN_RIGHT_PAREN, "expected ')' after range");
+                        /* The start value is already on the stack from expression() above */
+                        /* Declare loop variable and initialize with start value */
+                        add_local(loop_var);
+                        mark_initialized();
+                        u8 loop_var_slot = (u8)(current->local_count - 1);
 
-                    /* loop_start */
-                    i32 loop_start = current_chunk()->count;
+                        /* Compile end expression into a hidden local */
+                        expression();
 
-                    /* condition: i < __end */
-                    emit_bytes(OP_GET_LOCAL, loop_var_slot);
-                    emit_bytes(OP_GET_LOCAL, end_var_slot);
-                    emit_byte(OP_LESS);
+                        /* Create hidden __end variable */
+                        xen_token end_token;
+                        end_token.start  = "__end";
+                        end_token.length = 5;
+                        end_token.line   = parser.previous.line;
+                        end_token.type   = TOKEN_IDENTIFIER;
+                        add_local(end_token);
+                        mark_initialized();
+                        u8 end_var_slot = (u8)(current->local_count - 1);
 
-                    i32 exit_jump = emit_jump(OP_JUMP_IF_FALSE);
-                    emit_byte(OP_POP);
+                        consume(TOKEN_RIGHT_PAREN, "expected ')' after range");
 
-                    /* body */
-                    statement();
+                        /* loop_start */
+                        i32 loop_start = current_chunk()->count;
 
-                    /* increment: i = i + 1 */
-                    emit_bytes(OP_GET_LOCAL, loop_var_slot);
-                    emit_constant(NUMBER_VAL(1));
-                    emit_byte(OP_ADD);
-                    emit_bytes(OP_SET_LOCAL, loop_var_slot);
-                    emit_byte(OP_POP);
+                        /* condition: i < __end */
+                        emit_bytes(OP_GET_LOCAL, loop_var_slot);
+                        emit_bytes(OP_GET_LOCAL, end_var_slot);
+                        emit_byte(OP_LESS);
 
-                    emit_loop(loop_start);
+                        i32 exit_jump = emit_jump(OP_JUMP_IF_FALSE);
+                        emit_byte(OP_POP);
 
-                    patch_jump(exit_jump);
-                    emit_byte(OP_POP);
+                        /* body */
+                        statement();
 
-                    end_scope();
-                    return;
+                        /* increment: i = i + 1 */
+                        emit_bytes(OP_GET_LOCAL, loop_var_slot);
+                        emit_constant(NUMBER_VAL(1));
+                        emit_byte(OP_ADD);
+                        emit_bytes(OP_SET_LOCAL, loop_var_slot);
+                        emit_byte(OP_POP);
+
+                        emit_loop(loop_start);
+
+                        patch_jump(exit_jump);
+                        emit_byte(OP_POP);
+
+                        end_scope();
+                        return;
+                    } else {
+                        /* ============================================
+                         * ARRAY-BASED FOR LOOP: for (var x in array)
+                         * ============================================
+                         * Desugars to:
+                         *   var __arr = array;
+                         *   var __len = array.count;  (using OP_ARRAY_LEN)
+                         *   var __i = 0;
+                         *   while (__i < __len) {
+                         *       var x = __arr[__i];
+                         *       body;
+                         *       __i = __i + 1;
+                         *   }
+                         */
+
+                        /* The array value is on the stack from expression() above */
+                        /* Store it in hidden __arr variable */
+                        xen_token arr_token;
+                        arr_token.start  = "__arr";
+                        arr_token.length = 5;
+                        arr_token.line   = parser.previous.line;
+                        arr_token.type   = TOKEN_IDENTIFIER;
+                        add_local(arr_token);
+                        mark_initialized();
+                        u8 arr_slot = (u8)(current->local_count - 1);
+
+                        /* Get array length and store in __len */
+                        emit_bytes(OP_GET_LOCAL, arr_slot);
+                        emit_byte(OP_ARRAY_LEN);
+
+                        xen_token len_token;
+                        len_token.start  = "__len";
+                        len_token.length = 5;
+                        len_token.line   = parser.previous.line;
+                        len_token.type   = TOKEN_IDENTIFIER;
+                        add_local(len_token);
+                        mark_initialized();
+                        u8 len_slot = (u8)(current->local_count - 1);
+
+                        /* Initialize index __i = 0 */
+                        emit_constant(NUMBER_VAL(0));
+
+                        xen_token idx_token;
+                        idx_token.start  = "__i";
+                        idx_token.length = 3;
+                        idx_token.line   = parser.previous.line;
+                        idx_token.type   = TOKEN_IDENTIFIER;
+                        add_local(idx_token);
+                        mark_initialized();
+                        u8 idx_slot = (u8)(current->local_count - 1);
+
+                        consume(TOKEN_RIGHT_PAREN, "expected ')' after array expression");
+
+                        /* loop_start */
+                        i32 loop_start = current_chunk()->count;
+
+                        /* condition: __i < __len */
+                        emit_bytes(OP_GET_LOCAL, idx_slot);
+                        emit_bytes(OP_GET_LOCAL, len_slot);
+                        emit_byte(OP_LESS);
+
+                        i32 exit_jump = emit_jump(OP_JUMP_IF_FALSE);
+                        emit_byte(OP_POP);
+
+                        /* Declare loop variable and set to __arr[__i] */
+                        emit_bytes(OP_GET_LOCAL, arr_slot);
+                        emit_bytes(OP_GET_LOCAL, idx_slot);
+                        emit_byte(OP_ARRAY_GET);
+
+                        add_local(loop_var);
+                        mark_initialized();
+
+                        /* body */
+                        statement();
+
+                        /* Pop the loop variable (it goes out of scope each iteration) */
+                        emit_byte(OP_POP);
+                        current->local_count--;
+
+                        /* increment: __i = __i + 1 */
+                        emit_bytes(OP_GET_LOCAL, idx_slot);
+                        emit_constant(NUMBER_VAL(1));
+                        emit_byte(OP_ADD);
+                        emit_bytes(OP_SET_LOCAL, idx_slot);
+                        emit_byte(OP_POP);
+
+                        emit_loop(loop_start);
+
+                        patch_jump(exit_jump);
+                        emit_byte(OP_POP);
+
+                        end_scope();
+                        return;
+                    }
                 } else {
                     /* It's C-style: for (var i = ...; ...; ...) */
                     /* We've consumed '(', 'var', identifier */

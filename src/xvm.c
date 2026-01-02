@@ -427,6 +427,16 @@ static xen_exec_result run() {
                 stack_push(value); /* assignment is an expression, leaves value on stack */
                 break;
             }
+            case OP_ARRAY_LEN: {
+                xen_value array_val = stack_pop();
+                if (!OBJ_IS_ARRAY(array_val)) {
+                    runtime_error("can only get length of arrays");
+                    return EXEC_RUNTIME_ERROR;
+                }
+                xen_obj_array* arr = OBJ_AS_ARRAY(array_val);
+                stack_push(NUMBER_VAL(arr->array.count));
+                break;
+            }
             default: {
                 runtime_error("unknown instruction (%d)", instruction);
             }

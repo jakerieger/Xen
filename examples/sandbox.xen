@@ -1,21 +1,28 @@
 include io;
-include math;
-include string;
-include datetime;
+include array;
 
-var ITERS = 1000000;
+var items = ["apple", "banana", "orange"];
+io.println("Items: ", items);
+io.println("Size: ", array.len(items));
+io.println("First: ", array.first(items));
+io.println("Last: ", array.last(items));
 
-fn busy_work() {
-    var start = datetime.now();
-    
-    for (var i in 0..ITERS) {
-        io.println(i);
-    }
-    
-    var end = datetime.now();
-    var elapsed = end - start;
+array.push(items, "mango");
+io.println("Items: ", items);
 
-    io.println("Took: ", elapsed, " seconds");
+for (var i in 0..array.len(items)) {
+    var item = items[i];
+    io.println(i, ": ", item);
 }
 
-busy_work();
+for (var i in items) {
+    io.println(array.index_of(items, i), ": ", i);
+}
+
+io.print("Add an item: ");
+var new_item = io.readline();
+
+array.push(items, new_item);
+
+io.println("You added ", new_item, " to the list");
+io.println("Items: ", items);
