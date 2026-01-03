@@ -30,6 +30,42 @@ inline static char* xen_read_file(const char* filename) {
     return buffer;
 }
 
+inline static char* xen_read_line(FILE* file) {
+    size_t capacity = 128;
+    size_t length   = 0;
+    char* line      = (char*)malloc(capacity);
+
+    if (XEN_UNLIKELY(line == NULL)) {
+        xen_panic(XEN_ERR_ALLOCATION_FAILED, "failed to allocate char buffer");
+    }
+
+    i32 c;
+    while ((c = fgetc(file)) != EOF) {
+        if (c == '\n')
+            break;
+
+        if (length + 1 >= capacity) {
+            capacity *= 2;
+            char* new_line = realloc(line, capacity);
+            if (new_line == NULL) {
+                free(line);
+                xen_panic(XEN_ERR_ALLOCATION_FAILED, "failed to reallocate char buffer");
+            }
+            line = new_line;
+        }
+
+        line[length++] = c;
+    }
+
+    if (length == 0 && c == EOF) {
+        free(line);
+        return NULL;
+    }
+
+    line[length] = '\0';
+    return line;
+}
+
 inline static xen_chunk xen_read_bytecode(const char* filename) {
     FILE* fp = fopen(filename, "rb");
     if (!fp) {

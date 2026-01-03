@@ -4,6 +4,7 @@
 #include "xterminal.h"
 
 #include <stdlib.h>
+#include <stdnoreturn.h>
 
 /*
  * EXIT CODES FOR COMMON ERRORS
@@ -37,14 +38,14 @@ inline static char* xen_exit_code_to_str(int code) {
     }
 }
 
-inline static void xen_panic(int code, const char* fmt, ...) {
+noreturn inline static void xen_panic(int code, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     printf(COLOR_BOLD COLOR_RED "(panicked) " COLOR_RESET);
     vprintf(fmt, args);
     printf("\nexited with code %d (%s)\n", code, xen_exit_code_to_str(code));
     va_end(args);
-    exit(code);
+    quick_exit(code);
 }
 
 inline static void xen_runtime_error(const char* fmt, ...) {

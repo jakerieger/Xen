@@ -3,6 +3,7 @@
 #include "xerr.h"
 #include "xobject.h"
 #include "xvalue.h"
+#include "xutils.h"
 #include <ctype.h>
 #include <time.h>
 
@@ -320,9 +321,11 @@ static xen_value io_print(i32 argc, xen_value* args) {
     return NULL_VAL;
 }
 
-static xen_value io_readline(i32 argc, xen_value* args) {
-    (void)argc;
-    (void)args;
+static xen_value io_input(i32 argc, xen_value* args) {
+    bool has_prefix = (argc > 0 && args[0].type == VAL_OBJECT && OBJ_IS_STRING(args[0]));
+    if (has_prefix)
+        printf("%s", OBJ_AS_CSTRING(args[0]));
+
     char buffer[1024];
     if (fgets(buffer, sizeof(buffer), stdin)) {
         size_t len = strlen(buffer);
@@ -335,11 +338,78 @@ static xen_value io_readline(i32 argc, xen_value* args) {
     return NULL_VAL;
 }
 
+static xen_value io_readtxt(i32 argc, xen_value* args) {
+    if (argc != 1) {
+        xen_runtime_error("io_readtxt() takes one argument (filename)");
+        return NULL_VAL;
+    }
+
+    xen_value val = args[0];
+
+    if (val.type == VAL_OBJECT && OBJ_IS_STRING(val)) {
+        FILE* fp = fopen(OBJ_AS_CSTRING(val), "r");
+        if (!fp) {
+            xen_runtime_error("failed to open file: %s", OBJ_AS_CSTRING(val));
+            return NULL_VAL;
+        }
+
+        fseek(fp, 0, SEEK_END);
+        i32 fp_size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+
+        i32 input_size = fp_size + 1;
+        char* buffer   = (char*)malloc(input_size);
+
+        size_t read_bytes  = fread(buffer, 1, input_size, fp);
+        buffer[read_bytes] = '\0';
+        fclose(fp);
+
+        return OBJ_VAL(xen_obj_str_take(buffer, input_size));
+    } else {
+        xen_runtime_error("filename argument must be of type string (got '%s')", xen_value_type_to_str(val));
+        return NULL_VAL;
+    }
+}
+
+static xen_value io_readlines(i32 argc, xen_value* args) {
+    if (argc != 1) {
+        xen_runtime_error("io_readlines() takes one argument (filename)");
+        return NULL_VAL;
+    }
+
+    xen_value val = args[0];
+
+    if (val.type == VAL_OBJECT && OBJ_IS_STRING(val)) {
+        FILE* fp = fopen(OBJ_AS_CSTRING(val), "r");
+        if (!fp) {
+            xen_runtime_error("failed to open file: %s", OBJ_AS_CSTRING(val));
+            return NULL_VAL;
+        }
+
+        xen_obj_array* arr = xen_obj_array_new();
+
+        char* line;
+        while ((line = xen_read_line(fp)) != NULL) {
+            xen_obj_array_push(arr, OBJ_VAL(xen_obj_str_copy(line, strlen(line))));
+            free(line);
+        }
+
+        fclose(fp);
+
+        return OBJ_VAL(arr);
+    } else {
+        xen_runtime_error("filename argument must be of type string (got '%s')", xen_value_type_to_str(val));
+        return NULL_VAL;
+    }
+}
+
 xen_obj_namespace* xen_builtin_io() {
     xen_obj_namespace* io = xen_obj_namespace_new("io");
     xen_obj_namespace_set(io, "println", OBJ_VAL(xen_obj_native_func_new(io_println, "println")));
     xen_obj_namespace_set(io, "print", OBJ_VAL(xen_obj_native_func_new(io_print, "print")));
-    xen_obj_namespace_set(io, "readline", OBJ_VAL(xen_obj_native_func_new(io_readline, "readline")));
+    xen_obj_namespace_set(io, "input", OBJ_VAL(xen_obj_native_func_new(io_input, "input")));
+    xen_obj_namespace_set(io, "readtxt", OBJ_VAL(xen_obj_native_func_new(io_readtxt, "readtxt")));
+    xen_obj_namespace_set(io, "readlines", OBJ_VAL(xen_obj_native_func_new(io_readlines, "readlines")));
     return io;
 }
 
