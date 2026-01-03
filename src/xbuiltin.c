@@ -54,6 +54,117 @@ static xen_value xen_builtin_typeof(i32 argc, xen_value* args) {
     return OBJ_VAL(xen_obj_str_copy(type_str, strlen(type_str)));
 }
 
+/* type constructors */
+static xen_value xen_builtin_number_ctor(i32 argc, xen_value* args) {
+    if (argc != 1) {
+        xen_runtime_error("number constructor requires an argument");
+        return NULL_VAL;
+    }
+    xen_value val = args[0];
+    switch (val.type) {
+        case VAL_BOOL:
+            return NUMBER_VAL(VAL_AS_BOOL(val));
+        case VAL_NULL:
+            return NUMBER_VAL(0);
+        case VAL_NUMBER:
+            return val;
+        case VAL_OBJECT: {
+            if (OBJ_IS_STRING(val)) {
+                const char* str = OBJ_AS_CSTRING(val);
+                f64 num         = strtod(str, NULL);
+                return NUMBER_VAL(num);
+            } else {
+                const char* type_str = xen_value_type_to_str(val);
+                xen_runtime_error("cannot construct number from %s", type_str);
+                return NULL_VAL;
+            }
+        }
+    }
+
+    return NULL_VAL;
+}
+
+static xen_value xen_builtin_string_ctor(i32 argc, xen_value* args) {
+    if (argc != 1) {
+        xen_runtime_error("number constructor requires an argument");
+        return NULL_VAL;
+    }
+    xen_value val = args[0];
+    switch (val.type) {
+        case VAL_BOOL: {
+            const char* bool_str = VAL_AS_BOOL(val) == XEN_TRUE ? "true" : "false";
+            return OBJ_VAL(xen_obj_str_copy(bool_str, strlen(bool_str)));
+        }
+        case VAL_NULL:
+            return OBJ_VAL(xen_obj_str_copy("null", 4));
+        case VAL_NUMBER: {
+            char buffer[128] = {'\0'};
+            snprintf(buffer, sizeof(buffer), "%f", VAL_AS_NUMBER(val));
+            return OBJ_VAL(xen_obj_str_copy(buffer, strlen(buffer)));
+        }
+        case VAL_OBJECT: {
+            if (OBJ_IS_STRING(val)) {
+                return val;
+            }
+            break;
+        }
+    }
+
+    const char* obj_str = xen_value_type_to_str(val);
+    return OBJ_VAL(xen_obj_str_copy(obj_str, strlen(obj_str)));
+}
+
+static xen_value xen_builtin_bool_ctor(i32 argc, xen_value* args) {
+    if (argc != 1) {
+        xen_runtime_error("number constructor requires an argument");
+        return NULL_VAL;
+    }
+    xen_value val = args[0];
+    switch (val.type) {
+        case VAL_BOOL: {
+            return val;
+        }
+        case VAL_NULL:
+            return BOOL_VAL(XEN_FALSE);
+        case VAL_NUMBER: {
+            if (VAL_AS_NUMBER(val) != 0) {
+                return BOOL_VAL(XEN_TRUE);
+            } else {
+                return BOOL_VAL(XEN_FALSE);
+            }
+        }
+        default:
+            break;
+    }
+
+    return BOOL_VAL(XEN_TRUE);
+}
+
+/* signature: (number of elements, default value (or null if missing)) */
+static xen_value xen_builtin_array_ctor(i32 argc, xen_value* args) {
+    if (argc > 2) {
+        xen_runtime_error("array constructor has invalid number of arguments");
+        return NULL_VAL;
+    }
+
+    if (argc > 0 && args[0].type != VAL_NUMBER) {
+        xen_runtime_error("element count must be a number");
+        return NULL_VAL;
+    }
+
+    i32 element_count       = (argc > 0) ? VAL_AS_NUMBER(args[0]) : 0;
+    bool has_default        = (argc == 2) ? XEN_TRUE : XEN_FALSE;
+    xen_value default_value = (has_default) ? args[1] : NULL_VAL;
+
+    /* create the array */
+    xen_obj_array* arr = xen_obj_array_new_with_capacity(element_count);
+    for (i32 i = 0; i < element_count; i++) {
+        xen_obj_array_push(arr, default_value);
+    }
+
+    return OBJ_VAL(arr);
+}
+
 void xen_builtins_register() {
     srand((u32)time(NULL));
     xen_vm_register_namespace("math", OBJ_VAL(xen_builtin_math()));
@@ -64,6 +175,12 @@ void xen_builtins_register() {
 
     /* register globals */
     define_native_fn("typeof", xen_builtin_typeof);
+
+    /* type constructors */
+    define_native_fn("number", xen_builtin_number_ctor);
+    define_native_fn("string", xen_builtin_string_ctor);
+    define_native_fn("bool", xen_builtin_bool_ctor);
+    define_native_fn("array", xen_builtin_array_ctor);
 }
 
 void xen_vm_register_namespace(const char* name, xen_value ns) {
