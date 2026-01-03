@@ -128,7 +128,8 @@ void xen_vm_init(xen_vm_config config) {
     g_vm.objects = NULL;
     xen_table_init(&g_vm.globals);
     xen_table_init(&g_vm.strings);
-    xen_table_init(&g_vm.namespace_registry);  // register built in namespaces
+    xen_table_init(&g_vm.namespace_registry);
+    xen_table_init(&g_vm.const_globals);
     xen_builtins_register();
 }
 
@@ -136,6 +137,7 @@ void xen_vm_shutdown() {
     xen_table_free(&g_vm.strings);
     xen_table_free(&g_vm.globals);
     xen_table_free(&g_vm.namespace_registry);
+    xen_table_free(&g_vm.const_globals);
     xen_vm_mem_destroy(&g_vm.mem);
 }
 

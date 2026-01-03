@@ -9,7 +9,7 @@ include datetime;
 include array;
 
 // Global variables are defined like so:
-var ITERS = 1000;
+var ITERS = 10;
 
 // Loops
 for (var i = 0; i < ITERS; i++) {
@@ -36,26 +36,12 @@ while (array.len(items) > 0) {
 }
 
 // Functions
-fn say_hello() {
-    io.print("Enter your name: ");
-    var name = io.readline();
-    io.println("Hello, ", name, "!");
-}
-
-//say_hello();
-
-// You can cast primitives and strings to numbers with `number()`
-io.print("Enter a number: ");
-var num = number(io.readline());
-io.println(typeof(num), " ", num);
-
-// Functions as return values
 fn add_nums(a, b) {
     return a + b;
 }
 
 fn add_strings(a, b) {
-    return string.join(a, b);
+    return a + b;
 }
 
 fn get_add_func(type) {
@@ -113,3 +99,31 @@ x /= 2;
 io.println("x /= 2: ", x);
 x %= 7;
 io.println("x %= 7: ", x);
+
+// Object methods and properties
+
+var my_string = "this is my awesome string";
+var my_substr = my_string.substr(0, 4); // "this"
+io.println("my_substr: ", my_substr);
+
+var list_one = [1,3,5,7,9];
+var list_two = [2,4,6,8,10];
+io.println(list_one);
+io.println(list_one.reverse());
+
+if (list_one.len == list_two.len) {
+    for (var i in 0..list_one.len) {
+        list_one.push(list_two[i]);
+    }
+}
+
+io.println(list_one);
+
+while (list_one.len > 0) {
+    io.print(list_one.pop());
+    if (list_one.len > 1) {
+        io.print(", ");
+    }
+}
+io.println("");
+io.println(list_one.len);

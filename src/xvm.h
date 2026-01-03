@@ -29,6 +29,7 @@ typedef struct {
 
     xen_table strings;
     xen_table globals;
+    xen_table const_globals;
     xen_table namespace_registry;
     xen_obj* objects;
 } xen_vm;

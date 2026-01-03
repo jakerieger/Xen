@@ -5,6 +5,8 @@
 #include "xobject.h"
 #include "xscanner.h"
 #include "xvalue.h"
+#include "xtable.h"
+#include "xvm.h"
 
 // ============================================================================
 // Types
@@ -48,6 +50,7 @@ typedef struct {
 typedef struct {
     xen_token name;
     i32 depth;
+    bool is_const;
 } xen_local;
 
 typedef enum {
@@ -303,7 +306,7 @@ static i32 resolve_local(xen_compiler* compiler, xen_token* name) {
     return -1;
 }
 
-static void add_local(xen_token name) {
+static void add_local(xen_token name, bool is_const) {
     if (current->local_count == MAX_LOCALS) {
         error("too many local variables in function");
         return;
@@ -312,6 +315,7 @@ static void add_local(xen_token name) {
     xen_local* local = &current->locals[current->local_count++];
     local->name      = name;
     local->depth     = -1;  // Mark as uninitialized
+    local->is_const  = is_const;
 }
 
 static void declare_variable() {
@@ -332,7 +336,7 @@ static void declare_variable() {
         }
     }
 
-    add_local(*name);
+    add_local(*name, XEN_FALSE);
 }
 
 static u8 parse_variable(const char* msg) {
@@ -351,6 +355,25 @@ static void mark_initialized() {
     current->locals[current->local_count - 1].depth = current->scope_depth;
 }
 
+static bool is_local_const(xen_compiler* compiler, i32 slot) {
+    if (slot < 0 || slot >= compiler->local_count) {
+        return XEN_FALSE;
+    }
+    return compiler->locals[slot].is_const;
+}
+
+static bool is_global_const(xen_token* name) {
+    xen_obj_str* name_str = xen_obj_str_copy(name->start, name->length);
+    xen_value dummy;
+    bool result = xen_table_get(&g_vm.const_globals, name_str, &dummy);
+    return result;
+}
+
+static void mark_global_const(xen_token* name) {
+    xen_obj_str* name_str = xen_obj_str_copy(name->start, name->length);
+    xen_table_set(&g_vm.const_globals, name_str, BOOL_VAL(XEN_TRUE));
+}
+
 static void define_variable(u8 global) {
     if (current->scope_depth > 0) {
         mark_initialized();
@@ -364,9 +387,18 @@ static void named_variable(xen_token name, bool can_assign) {
     u8 get_op, set_op;
     i32 arg = resolve_local(current, &name);
 
-    bool is_local = (arg != -1);
-    if (!is_local) {
-        arg = identifier_constant(&name);
+    bool is_local     = (arg != -1);
+    bool is_const_var = XEN_FALSE;
+
+    if (is_local) {
+        is_const_var = is_local_const(current, arg);
+        get_op       = OP_GET_LOCAL;
+        set_op       = OP_SET_LOCAL;
+    } else {
+        is_const_var = is_global_const(&name);
+        arg          = identifier_constant(&name);
+        get_op       = OP_GET_GLOBAL;
+        set_op       = OP_SET_GLOBAL;
     }
 
     /* record for potential postfix operator */
@@ -375,12 +407,18 @@ static void named_variable(xen_token name, bool can_assign) {
     parser.last_was_local    = is_local;
     parser.last_variable_arg = arg;
 
-    if (is_local) {
-        get_op = OP_GET_LOCAL;
-        set_op = OP_SET_LOCAL;
-    } else {
-        get_op = OP_GET_GLOBAL;
-        set_op = OP_SET_GLOBAL;
+    /* check for any assignment to const variable */
+    if (can_assign && is_const_var) {
+        if (check(TOKEN_EQUAL) || check(TOKEN_PLUS_EQUAL) || check(TOKEN_MINUS_EQUAL) || check(TOKEN_ASTERISK_EQUAL) ||
+            check(TOKEN_SLASH_EQUAL) || check(TOKEN_PERCENT_EQUAL)) {
+            error("cannot assign to constant variable");
+            // Consume the token to prevent cascading errors
+            advance();
+            if (!check(TOKEN_SEMICOLON)) {
+                expression();
+            }
+            return;
+        }
     }
 
     if (can_assign && match_token(TOKEN_EQUAL)) {
@@ -578,6 +616,18 @@ static void postfix_inc(bool can_assign) {
         return;
     }
 
+    bool is_const_var = XEN_FALSE;
+    if (parser.last_was_local) {
+        is_const_var = is_local_const(current, parser.last_variable_arg);
+    } else {
+        is_const_var = is_global_const(&parser.last_variable);
+    }
+    if (is_const_var) {
+        error("cannot modify constant variable with '++'");
+        parser.last_was_variable = XEN_FALSE;
+        return;
+    }
+
     u8 get_op = parser.last_was_local ? OP_GET_LOCAL : OP_GET_GLOBAL;
     u8 set_op = parser.last_was_local ? OP_SET_LOCAL : OP_SET_GLOBAL;
     u8 arg    = (u8)parser.last_variable_arg;
@@ -599,6 +649,18 @@ static void postfix_dec(bool can_assign) {
 
     if (!parser.last_was_variable) {
         error("operand of '--' must be a variable");
+        return;
+    }
+
+    bool is_const_var = XEN_FALSE;
+    if (parser.last_was_local) {
+        is_const_var = is_local_const(current, parser.last_variable_arg);
+    } else {
+        is_const_var = is_global_const(&parser.last_variable);
+    }
+    if (is_const_var) {
+        error("cannot modify constant variable with '--'");
+        parser.last_was_variable = XEN_FALSE;
         return;
     }
 
@@ -625,7 +687,19 @@ static void prefix_inc(bool can_assign) {
     u8 get_op, set_op;
     i32 arg = resolve_local(current, &name);
 
-    if (arg != -1) {
+    bool is_local     = (arg != -1);
+    bool is_const_var = XEN_FALSE;
+    if (is_local) {
+        is_const_var = is_local_const(current, arg);
+    } else {
+        is_const_var = is_global_const(&name);
+    }
+    if (is_const_var) {
+        error("cannot modify constant variable with '++'");
+        return;
+    }
+
+    if (is_local) {
         get_op = OP_GET_LOCAL;
         set_op = OP_SET_LOCAL;
     } else {
@@ -650,7 +724,19 @@ static void prefix_dec(bool can_assign) {
     u8 get_op, set_op;
     i32 arg = resolve_local(current, &name);
 
-    if (arg != -1) {
+    bool is_local     = (arg != -1);
+    bool is_const_var = XEN_FALSE;
+    if (is_local) {
+        is_const_var = is_local_const(current, arg);
+    } else {
+        is_const_var = is_global_const(&name);
+    }
+    if (is_const_var) {
+        error("cannot modify constant variable with '--'");
+        return;
+    }
+
+    if (is_local) {
         get_op = OP_GET_LOCAL;
         set_op = OP_SET_LOCAL;
     } else {
@@ -749,6 +835,7 @@ xen_parse_rule rules[] = {
     [TOKEN_NUMBER]           = {number,     NULL,        PREC_NONE},
     [TOKEN_AND]              = {NULL,       and_,        PREC_AND},
     [TOKEN_CLASS]            = {NULL,       NULL,        PREC_NONE},
+    [TOKEN_CONST]            = {NULL,       NULL,        PREC_NONE},
     [TOKEN_ELSE]             = {NULL,       NULL,        PREC_NONE},
     [TOKEN_FALSE]            = {literal,    NULL,        PREC_NONE},
     [TOKEN_FOR]              = {NULL,       NULL,        PREC_NONE},
@@ -812,6 +899,7 @@ static void synchronize() {
 
         switch (parser.current.type) {
             case TOKEN_CLASS:
+            case TOKEN_CONST:
             case TOKEN_FN:
             case TOKEN_VAR:
             case TOKEN_FOR:
@@ -931,7 +1019,7 @@ static void for_in_statement() {
 
     /* declare the loop variable */
     xen_token loop_var = parser.previous;
-    add_local(loop_var);
+    add_local(loop_var, XEN_FALSE);
 
     consume(TOKEN_IN, "expected 'in' after loop variable");
 
@@ -951,7 +1039,7 @@ static void for_in_statement() {
     end_token.length = 5;
     end_token.line   = parser.previous.line;
     end_token.type   = TOKEN_IDENTIFIER;
-    add_local(end_token);
+    add_local(end_token, XEN_FALSE);
     mark_initialized();
     u8 end_var_slot = (u8)(current->local_count - 1);
 
@@ -1085,7 +1173,7 @@ static void for_statement() {
 
                         /* The start value is already on the stack from expression() above */
                         /* Declare loop variable and initialize with start value */
-                        add_local(loop_var);
+                        add_local(loop_var, XEN_FALSE);
                         mark_initialized();
                         u8 loop_var_slot = (u8)(current->local_count - 1);
 
@@ -1098,7 +1186,7 @@ static void for_statement() {
                         end_token.length = 5;
                         end_token.line   = parser.previous.line;
                         end_token.type   = TOKEN_IDENTIFIER;
-                        add_local(end_token);
+                        add_local(end_token, XEN_FALSE);
                         mark_initialized();
                         u8 end_var_slot = (u8)(current->local_count - 1);
 
@@ -1154,7 +1242,7 @@ static void for_statement() {
                         arr_token.length = 5;
                         arr_token.line   = parser.previous.line;
                         arr_token.type   = TOKEN_IDENTIFIER;
-                        add_local(arr_token);
+                        add_local(arr_token, XEN_FALSE);
                         mark_initialized();
                         u8 arr_slot = (u8)(current->local_count - 1);
 
@@ -1167,7 +1255,7 @@ static void for_statement() {
                         len_token.length = 5;
                         len_token.line   = parser.previous.line;
                         len_token.type   = TOKEN_IDENTIFIER;
-                        add_local(len_token);
+                        add_local(len_token, XEN_FALSE);
                         mark_initialized();
                         u8 len_slot = (u8)(current->local_count - 1);
 
@@ -1179,7 +1267,7 @@ static void for_statement() {
                         idx_token.length = 3;
                         idx_token.line   = parser.previous.line;
                         idx_token.type   = TOKEN_IDENTIFIER;
-                        add_local(idx_token);
+                        add_local(idx_token, XEN_FALSE);
                         mark_initialized();
                         u8 idx_slot = (u8)(current->local_count - 1);
 
@@ -1201,7 +1289,7 @@ static void for_statement() {
                         emit_bytes(OP_GET_LOCAL, idx_slot);
                         emit_byte(OP_ARRAY_GET);
 
-                        add_local(loop_var);
+                        add_local(loop_var, XEN_FALSE);
                         mark_initialized();
 
                         /* body */
@@ -1236,7 +1324,7 @@ static void for_statement() {
                     /* We already have the identifier in parser.previous */
                     /* Declare it as a local */
                     xen_token var_name = parser.previous;
-                    add_local(var_name);
+                    add_local(var_name, XEN_FALSE);
 
                     if (match_token(TOKEN_EQUAL)) {
                         expression();
@@ -1355,17 +1443,52 @@ static void statement() {
 // Declarations
 // ============================================================================
 
-static void var_declaration() {
-    u8 global = parse_variable("expected variable name");
+static void var_declaration_impl(bool is_const) {
+    u8 global          = parse_variable("expected variable name");
+    xen_token var_name = parser.previous;  // Save the variable name for const tracking
 
-    if (match_token(TOKEN_EQUAL)) {
+    if (is_const) {
+        if (!match_token(TOKEN_EQUAL)) {
+            error("constant variables must be initialized");
+            // Still need to emit something and consume semicolon
+            emit_byte(OP_NULL);
+            consume(TOKEN_SEMICOLON, "expected ';' after variable declaration");
+            define_variable(global);
+            return;
+        }
         expression();
     } else {
-        emit_byte(OP_NULL);
+        if (match_token(TOKEN_EQUAL)) {
+            expression();
+        } else {
+            emit_byte(OP_NULL);
+        }
     }
 
     consume(TOKEN_SEMICOLON, "expected ';' after variable declaration");
+
+    // Track constness
+    if (current->scope_depth > 0) {
+        // For locals, update the is_const flag (add_local was called in declare_variable)
+        current->locals[current->local_count - 1].is_const = is_const;
+    } else {
+        // For globals, record in our const table
+        if (is_const) {
+            mark_global_const(&var_name);
+        }
+    }
+
     define_variable(global);
+}
+
+static void var_declaration() {
+    var_declaration_impl(XEN_FALSE);
+}
+
+static void const_var_declaration() {
+    // We've already consumed 'const', now expect 'var'
+    consume(TOKEN_VAR, "expected 'var' after 'const'");
+    var_declaration_impl(XEN_TRUE);
 }
 
 static void function(xen_function_type type) {
@@ -1418,6 +1541,8 @@ static void include_declaration() {
 static void declaration() {
     if (match_token(TOKEN_FN)) {
         fn_declaration();
+    } else if (match_token(TOKEN_CONST)) {
+        const_var_declaration();
     } else if (match_token(TOKEN_VAR)) {
         var_declaration();
     } else if (match_token(TOKEN_INCLUDE)) {
@@ -1452,6 +1577,7 @@ xen_obj_func* xen_compile(const char* source) {
     }
 
     xen_obj_func* fn = end_compiler();
+
     const char* name = "main";
     fn->name         = xen_obj_str_copy(name, strlen(name));
     return parser.had_error ? NULL : fn;
