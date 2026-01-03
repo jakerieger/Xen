@@ -45,7 +45,7 @@ noreturn inline static void xen_panic(int code, const char* fmt, ...) {
     vprintf(fmt, args);
     printf("\nexited with code %d (%s)\n", code, xen_exit_code_to_str(code));
     va_end(args);
-    quick_exit(code);
+    exit(code);
 }
 
 inline static void xen_runtime_error(const char* fmt, ...) {
