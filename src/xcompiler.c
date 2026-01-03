@@ -794,6 +794,13 @@ static void subscript(bool can_assign) {
     }
 }
 
+static void function(xen_function_type type);
+
+static void fn_expr(bool can_assign) {
+    XEN_UNUSED(can_assign);
+    function(TYPE_FUNCTION);
+}
+
 // ============================================================================
 // Parse Rules
 // ============================================================================
@@ -839,7 +846,7 @@ xen_parse_rule rules[] = {
     [TOKEN_ELSE]             = {NULL,       NULL,        PREC_NONE},
     [TOKEN_FALSE]            = {literal,    NULL,        PREC_NONE},
     [TOKEN_FOR]              = {NULL,       NULL,        PREC_NONE},
-    [TOKEN_FN]               = {NULL,       NULL,        PREC_NONE},
+    [TOKEN_FN]               = {fn_expr,    NULL,        PREC_NONE},
     [TOKEN_IF]               = {NULL,       NULL,        PREC_NONE},
     [TOKEN_IN]               = {NULL,       NULL,        PREC_NONE},
     [TOKEN_NULL]             = {literal,    NULL,        PREC_NONE},
@@ -1510,8 +1517,17 @@ static void function(xen_function_type type) {
     }
 
     consume(TOKEN_RIGHT_PAREN, "expected ')' after parameters");
-    consume(TOKEN_LEFT_BRACE, "expected '{' before function body");
-    block();
+
+    if (match_token(TOKEN_ARROW)) {
+        // Single expression body, implicit return
+        expression();
+        emit_byte(OP_RETURN);
+        consume(TOKEN_SEMICOLON, "expected ';' after arrow function");
+    } else {
+        // Traditional block body
+        consume(TOKEN_LEFT_BRACE, "expected '{' before function body");
+        block();
+    }
 
     xen_obj_func* fn = end_compiler();
     emit_bytes(OP_CONSTANT, make_constant(OBJ_VAL(fn)));

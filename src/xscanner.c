@@ -237,6 +237,8 @@ xen_token xen_scanner_emit() {
             return make_token(TOKEN_SEMICOLON);
         case ',':
             return make_token(TOKEN_COMMA);
+        case ':':
+            return make_token(TOKEN_COLON);
         case '.':
             return make_token(match('.') ? TOKEN_DOT_DOT : TOKEN_DOT);
         case '-': {
@@ -263,8 +265,14 @@ xen_token xen_scanner_emit() {
             return make_token(match('=') ? TOKEN_PERCENT_EQUAL : TOKEN_PERCENT);
         case '!':
             return make_token(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
-        case '=':
-            return make_token(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
+        case '=': {
+            if (match('=')) {
+                return make_token(TOKEN_EQUAL_EQUAL);
+            } else if (match('>')) {
+                return make_token(TOKEN_ARROW);
+            }
+            return make_token(TOKEN_EQUAL);
+        }
         case '<':
             return make_token(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
         case '>':
@@ -399,6 +407,10 @@ const char* xen_token_type_to_str(xen_token_type type) {
             return "]";
         case TOKEN_CONST:
             return "const";
+        case TOKEN_COLON:
+            return ":";
+        case TOKEN_ARROW:
+            return "=>";
     }
     return "";
 }
