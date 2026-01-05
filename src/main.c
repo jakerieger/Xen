@@ -1,10 +1,62 @@
 #include "xcommon.h"
+#include "xmem.h"
 #include "xscanner.h"
 #include "xversion.h"
 #include "xvm.h"
 #include "xutils.h"
 
 #define MAX_LINE_SIZE 1024
+#define MAX_LINE_HISTORY 100
+
+#ifdef _WIN32
+    #include <conio.h>
+#else
+    #include <termios.h>
+    #include <unistd.h>
+#endif
+
+// For Unix/Linux
+#ifndef _WIN32
+static struct termios orig_termios;
+
+static void disable_raw_mode() {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+}
+
+static void enable_raw_mode() {
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    atexit(disable_raw_mode);
+
+    struct termios raw = orig_termios;
+    raw.c_lflag &= ~(ECHO | ICANON);
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
+static int read_key() {
+    int c = getchar();
+
+    if (c == '\x1b') {  // ESC sequence
+        int seq[2];
+        seq[0] = getchar();
+        seq[1] = getchar();
+
+        if (seq[0] == '[') {
+            switch (seq[1]) {
+                case 'A':
+                    return 1000;  // Up arrow
+                case 'B':
+                    return 1001;  // Down arrow
+                case 'C':
+                    return 1002;  // Right arrow
+                case 'D':
+                    return 1003;  // Left arrow
+            }
+        }
+    }
+
+    return c;
+}
+#endif
 
 static void repl() {
     printf(COLOR_BOLD COLOR_BRIGHT_BLUE "Xen" COLOR_RESET " %s " COLOR_DIM
@@ -13,22 +65,120 @@ static void repl() {
     printf(COLOR_ITALIC "Type " COLOR_RESET COLOR_BOLD ".exit" COLOR_RESET COLOR_ITALIC
                         " to quit the REPL.\n\n" COLOR_RESET);
 
+    xen_ring_buffer* line_history = xen_ring_buffer_create(MAX_LINE_HISTORY);
+
     char line[MAX_LINE_SIZE];
+    int history_index = -1;
+
+#ifndef _WIN32
+    enable_raw_mode();
+#endif
 
     for (;;) {
         printf("=> ");
-        if (!fgets(line, MAX_LINE_SIZE, stdin)) {
-            printf("\n");
-            break;
+        fflush(stdout);
+
+        int pos = 0;
+        memset(line, 0, MAX_LINE_SIZE);
+
+        for (;;) {
+#ifdef _WIN32
+            int c = _getch();
+            if (c == 224) {  // Arrow key prefix on Windows
+                c = _getch();
+                if (c == 72)
+                    c = 1000;  // Up
+                else if (c == 80)
+                    c = 1001;  // Down
+            }
+#else
+            int c = read_key();
+#endif
+
+            if (c == 1000) {  // Up arrow
+                if (history_index < (int)xen_ring_buffer_count(line_history) - 1) {
+                    history_index++;
+                    const char* hist = xen_ring_buffer_peek_from_end(line_history, history_index);
+                    if (hist) {
+                        // Clear current line
+                        printf("\r=> ");
+                        for (int i = 0; i < pos; i++)
+                            printf(" ");
+                        printf("\r=> ");
+
+                        strcpy(line, hist);
+                        pos = strlen(line);
+                        if (line[pos - 1] == '\n') {
+                            line[pos - 1] = '\0';
+                            pos--;
+                        }
+                        printf("%s", line);
+                        fflush(stdout);
+                    }
+                }
+            } else if (c == 1001) {  // Down arrow
+                if (history_index > 0) {
+                    history_index--;
+                    const char* hist = xen_ring_buffer_peek_from_end(line_history, history_index);
+                    if (hist) {
+                        printf("\r=> ");
+                        for (int i = 0; i < pos; i++)
+                            printf(" ");
+                        printf("\r=> ");
+
+                        strcpy(line, hist);
+                        pos = strlen(line);
+                        if (line[pos - 1] == '\n') {
+                            line[pos - 1] = '\0';
+                            pos--;
+                        }
+                        printf("%s", line);
+                        fflush(stdout);
+                    }
+                } else if (history_index == 0) {
+                    history_index = -1;
+                    printf("\r=> ");
+                    for (int i = 0; i < pos; i++)
+                        printf(" ");
+                    printf("\r=> ");
+                    memset(line, 0, MAX_LINE_SIZE);
+                    pos = 0;
+                    fflush(stdout);
+                }
+            } else if (c == '\n' || c == '\r') {
+                line[pos]     = '\n';
+                line[pos + 1] = '\0';
+                printf("\n");
+                break;
+            } else if (c == 127 || c == 8) {  // Backspace
+                if (pos > 0) {
+                    pos--;
+                    line[pos] = '\0';
+                    printf("\b \b");
+                    fflush(stdout);
+                }
+            } else if (c >= 32 && c < 127) {  // Printable characters
+                if (pos < MAX_LINE_SIZE - 2) {
+                    line[pos++] = c;
+                    printf("%c", c);
+                    fflush(stdout);
+                }
+            }
         }
 
         if (strcmp(line, ".exit\n") == 0) {
             break;
         }
 
+        if (strlen(line) > 1) {  // Don't add empty lines
+            xen_ring_buffer_push(line_history, line);
+            history_index = -1;
+        }
+
         xen_exec_result exec_result = xen_vm_exec(line, XEN_FALSE, NULL);
-        // We won't panic in the REPL
     }
+
+    xen_ring_buffer_free(line_history);
 }
 
 static void print_help() {
