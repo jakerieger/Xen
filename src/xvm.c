@@ -344,6 +344,33 @@ static xen_exec_result run() {
                 xen_obj_str* name = OBJ_AS_STRING(READ_CONSTANT());
                 xen_value obj_val = peek(0);
 
+                // Check for instance property/method access
+                if (OBJ_IS_INSTANCE(obj_val)) {
+                    xen_obj_instance* instance = OBJ_AS_INSTANCE(obj_val);
+                    xen_value value;
+
+                    // First check fields
+                    if (xen_obj_instance_get(instance, name, &value)) {
+                        stack_pop();  // Pop instance
+                        stack_push(value);
+                        break;
+                    }
+
+                    // Then check methods
+                    xen_value method;
+                    if (xen_table_get(&instance->class->methods, name, &method)) {
+                        // Create bound method
+                        xen_value receiver          = stack_pop();
+                        xen_obj_bound_method* bound = xen_obj_bound_method_new_func(receiver, OBJ_AS_FUNCTION(method));
+                        // Store the actual function
+                        stack_push(OBJ_VAL(bound));
+                        break;
+                    }
+
+                    runtime_error("undefined property '%s'", name->str);
+                    return EXEC_RUNTIME_ERROR;
+                }
+
                 // Check for namespace property access
                 if (VAL_IS_OBJ(obj_val) && OBJ_TYPE(obj_val) == OBJ_NAMESPACE) {
                     xen_obj_namespace* ns = OBJ_AS_NAMESPACE(obj_val);
@@ -387,6 +414,22 @@ static xen_exec_result run() {
 
                 // the receiver is on the stack below the arguments
                 xen_value receiver = peek(arg_count);
+
+                if (OBJ_IS_INSTANCE(receiver)) {
+                    xen_obj_instance* instance = OBJ_AS_INSTANCE(receiver);
+                    xen_value method;
+
+                    if (xen_table_get(&instance->class->methods, method_name, &method)) {
+                        if (!call(OBJ_AS_FUNCTION(method), arg_count)) {
+                            return EXEC_RUNTIME_ERROR;
+                        }
+                        frame = &g_vm.frames[g_vm.frame_count - 1];
+                        break;
+                    }
+
+                    runtime_error("undefined method '%s'", method_name->str);
+                    return EXEC_RUNTIME_ERROR;
+                }
 
                 // check for namespace method call
                 if (VAL_IS_OBJ(receiver) && OBJ_IS_NAMESPACE(receiver)) {
@@ -541,6 +584,105 @@ static xen_exec_result run() {
                 }
 
                 // assignment is an expression - leave value on stack
+                stack_push(value);
+                break;
+            }
+            case OP_CLASS: {
+                xen_obj_str* name    = READ_STRING();
+                xen_obj_class* class = xen_obj_class_new(name);
+                stack_push(OBJ_VAL(class));
+                break;
+            }
+            case OP_PROPERTY: {
+                // Stack: [class, default_value]
+                u8 name_idx     = READ_BYTE();
+                bool is_private = READ_BYTE();
+
+                xen_obj_str* name     = OBJ_AS_STRING(frame->fn->chunk.constants.values[name_idx]);
+                xen_value default_val = stack_pop();
+                xen_value class_val   = peek(0);
+
+                if (!OBJ_IS_CLASS(class_val)) {
+                    runtime_error("can only add properties to classes");
+                    return EXEC_RUNTIME_ERROR;
+                }
+
+                xen_obj_class* class = OBJ_AS_CLASS(class_val);
+                xen_obj_class_add_property(class, name, default_val, is_private);
+                break;
+            }
+            case OP_METHOD: {
+                // Stack: [class, function]
+                u8 name_idx     = READ_BYTE();
+                bool is_private = READ_BYTE();
+
+                xen_obj_str* name    = OBJ_AS_STRING(frame->fn->chunk.constants.values[name_idx]);
+                xen_value method_val = stack_pop();
+                xen_value class_val  = peek(0);
+
+                xen_obj_class* class = OBJ_AS_CLASS(class_val);
+                xen_obj_func* method = OBJ_AS_FUNCTION(method_val);
+
+                xen_obj_class_add_method(class, name, method, is_private);
+                break;
+            }
+            case OP_INITIALIZER: {
+                // Stack: [class, function]
+                xen_value init_val  = stack_pop();
+                xen_value class_val = peek(0);
+
+                xen_obj_class* class = OBJ_AS_CLASS(class_val);
+                class->initializer   = OBJ_AS_FUNCTION(init_val);
+                break;
+            }
+            case OP_CALL_INIT: {
+                u8 arg_count        = READ_BYTE();
+                xen_value class_val = peek(arg_count);
+
+                if (!OBJ_IS_CLASS(class_val)) {
+                    runtime_error("can only instantiate classes");
+                    return EXEC_RUNTIME_ERROR;
+                }
+
+                xen_obj_class* class       = OBJ_AS_CLASS(class_val);
+                xen_obj_instance* instance = xen_obj_instance_new(class);
+
+                // Replace class on stack with instance
+                g_vm.stack_top[-arg_count - 1] = OBJ_VAL(instance);
+
+                // Call initializer if present
+                if (class->initializer != NULL) {
+                    if (!call(class->initializer, arg_count)) {
+                        return EXEC_RUNTIME_ERROR;
+                    }
+                    frame = &g_vm.frames[g_vm.frame_count - 1];
+                } else if (arg_count != 0) {
+                    runtime_error("expected 0 arguments but got %d", arg_count);
+                    return EXEC_RUNTIME_ERROR;
+                }
+                break;
+            }
+            case OP_SET_PROPERTY: {
+                // Stack: [instance, value]
+                xen_obj_str* name = READ_STRING();
+
+                xen_value value    = stack_pop();
+                xen_value inst_val = peek(0);
+
+                if (!OBJ_IS_INSTANCE(inst_val)) {
+                    runtime_error("only instances have properties");
+                    return EXEC_RUNTIME_ERROR;
+                }
+
+                xen_obj_instance* instance = OBJ_AS_INSTANCE(inst_val);
+
+                if (!xen_obj_instance_set(instance, name, value)) {
+                    runtime_error("undefined property '%s'", name->str);
+                    return EXEC_RUNTIME_ERROR;
+                }
+
+                // Pop instance, push value (assignment expression returns value)
+                stack_pop();
                 stack_push(value);
                 break;
             }

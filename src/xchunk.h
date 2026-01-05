@@ -40,6 +40,12 @@ typedef enum {
     OP_ARRAY_LEN,
     OP_DICT_NEW,
     OP_DICT_ADD,
+    OP_CLASS,         // Create class object
+    OP_SET_PROPERTY,  // Set property on instance
+    OP_METHOD,        // Add method to class
+    OP_PROPERTY,
+    OP_INITIALIZER,
+    OP_CALL_INIT,
 } xen_opcode;
 
 typedef struct {

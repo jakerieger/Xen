@@ -63,6 +63,9 @@ typedef enum {
     TOKEN_WHILE,
     TOKEN_IN,
     TOKEN_INCLUDE,
+    TOKEN_INIT,
+    TOKEN_NEW,
+    TOKEN_PRIVATE,
     // Signal tokens
     TOKEN_ERROR,
     TOKEN_EOF,

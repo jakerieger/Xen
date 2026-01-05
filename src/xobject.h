@@ -66,13 +66,42 @@ struct xen_obj_bound_method {
     xen_obj obj;
     xen_value receiver;    // The object the method is bound to
     xen_native_fn method;  // The native method function
-    const char* name;      // Method name for debugging
+    xen_obj_func* function;
+    const char* name;  // Method name for debugging
 };
 
 struct xen_obj_dict {
     xen_obj obj;
     xen_table table;
 };
+
+typedef struct {
+    xen_obj_str* name;
+    xen_value default_value;
+    bool is_private;
+    i32 index;  // index in instance fields array
+} xen_property_def;
+
+// class definition (the blueprint)
+struct xen_obj_class {
+    xen_obj obj;
+    xen_obj_str* name;
+
+    xen_property_def* properties;
+    i32 property_count;
+    i32 property_capacity;
+
+    xen_table methods;          // name -> xen_obj_func*
+    xen_table private_methods;  // name -> xen_obj_func*
+
+    xen_obj_func* initializer;  // init() method
+};
+
+typedef struct {
+    xen_obj obj;
+    xen_obj_class* class;
+    xen_value* fields;  // property values, indexed by propery_def.index
+} xen_obj_instance;
 
 #define OBJ_TYPE(v) (VAL_AS_OBJ(v)->type)
 
@@ -98,6 +127,11 @@ struct xen_obj_dict {
 #define OBJ_IS_DICT(value) xen_obj_is_type(value, OBJ_DICT)
 #define OBJ_AS_DICT(value) ((xen_obj_dict*)VAL_AS_OBJ(value))
 
+#define OBJ_IS_CLASS(value) xen_obj_is_type(value, OBJ_CLASS)
+#define OBJ_IS_INSTANCE(value) xen_obj_is_type(value, OBJ_INSTANCE)
+#define OBJ_AS_CLASS(value) ((xen_obj_class*)VAL_AS_OBJ(value))
+#define OBJ_AS_INSTANCE(value) ((xen_obj_instance*)VAL_AS_OBJ(value))
+
 bool xen_obj_is_type(xen_value value, xen_obj_type type);
 void xen_obj_print(xen_value value);
 
@@ -121,6 +155,7 @@ i32 xen_obj_array_length(xen_obj_array* arr);
 
 // Bound method functions
 xen_obj_bound_method* xen_obj_bound_method_new(xen_value receiver, xen_native_fn method, const char* name);
+xen_obj_bound_method* xen_obj_bound_method_new_func(xen_value receiver, xen_obj_func* func);
 
 // Method entry for method tables
 typedef struct {
@@ -136,5 +171,13 @@ xen_obj_dict* xen_obj_dict_new();
 void xen_obj_dict_set(xen_obj_dict* dict, xen_value key, xen_value value);
 bool xen_obj_dict_get(xen_obj_dict* dict, xen_value key, xen_value* out);
 bool xen_obj_dict_delete(xen_obj_dict* dict, xen_value key);
+
+xen_obj_class* xen_obj_class_new(xen_obj_str* name);
+void xen_obj_class_add_property(xen_obj_class* class, xen_obj_str* name, xen_value default_val, bool is_private);
+void xen_obj_class_add_method(xen_obj_class* class, xen_obj_str* name, xen_obj_func* method, bool is_private);
+
+xen_obj_instance* xen_obj_instance_new(xen_obj_class* class);
+bool xen_obj_instance_get(xen_obj_instance* inst, xen_obj_str* name, xen_value* out);
+bool xen_obj_instance_set(xen_obj_instance* inst, xen_obj_str* name, xen_value value);
 
 #endif

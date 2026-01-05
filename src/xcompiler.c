@@ -8,6 +8,7 @@
 #include "xtable.h"
 #include "xvm.h"
 #include <math.h>
+#include <string.h>
 
 // ============================================================================
 // Types
@@ -57,6 +58,8 @@ typedef struct {
 typedef enum {
     TYPE_FUNCTION,
     TYPE_SCRIPT,
+    TYPE_METHOD,
+    TYPE_INITIALIZER,
 } xen_function_type;
 
 #define MAX_LOCALS 256
@@ -70,6 +73,13 @@ typedef struct xen_compiler {
     i32 local_count;
     i32 scope_depth;
 } xen_compiler;
+
+typedef struct class_compiler {
+    struct class_compiler* enclosing;
+    xen_token name;
+} class_compiler;
+
+static class_compiler* current_class = NULL;
 
 static const char* builtin_namespaces[] = {
   "io",
@@ -261,6 +271,16 @@ static void init_compiler(xen_compiler* compiler, xen_function_type type) {
     local->depth       = 0;
     local->name.start  = "";
     local->name.length = 0;
+    local->is_const    = XEN_FALSE;
+
+    if (type == TYPE_METHOD || type == TYPE_INITIALIZER) {
+        // 'this' occupies slot 0
+        local->name.start  = "this";
+        local->name.length = 4;
+    } else {
+        local->name.start  = "";
+        local->name.length = 0;
+    }
 }
 
 // ============================================================================
@@ -754,17 +774,20 @@ static void prefix_dec(bool can_assign) {
 }
 
 static void dot(bool can_assign) {
-    XEN_UNUSED(can_assign);
     consume(TOKEN_IDENTIFIER, "expected property name after '.'");
     u8 name = identifier_constant(&parser.previous);
 
-    if (match_token(TOKEN_LEFT_PAREN)) {
-        // method call: obj.method(args)
+    if (can_assign && match_token(TOKEN_EQUAL)) {
+        // Property assignment: obj.prop = value
+        expression();
+        emit_bytes(OP_SET_PROPERTY, name);
+    } else if (match_token(TOKEN_LEFT_PAREN)) {
+        // Method call: obj.method(args)
         u8 arg_count = argument_list();
         emit_bytes(OP_INVOKE, name);
         emit_byte(arg_count);
     } else {
-        // property access: obj.property
+        // Property access: obj.prop
         emit_bytes(OP_GET_PROPERTY, name);
     }
 }
@@ -823,6 +846,32 @@ static void dictionary(bool can_assign) {
     consume(TOKEN_RIGHT_BRACE, "expect '}' after dictionary");
 }
 
+static void this_(bool can_assign) {
+    XEN_UNUSED(can_assign);
+
+    if (current_class == NULL) {
+        error("cannot use 'this' outside of a class body");
+        return;
+    }
+
+    // 'this' is always local slot 0 in methods
+    variable(XEN_FALSE);
+}
+
+static void new_expr(bool can_assign) {
+    XEN_UNUSED(can_assign);
+
+    consume(TOKEN_IDENTIFIER, "expect class name after 'new'");
+    u8 name_constant = identifier_constant(&parser.previous);
+
+    emit_bytes(OP_GET_GLOBAL, name_constant);
+
+    consume(TOKEN_LEFT_PAREN, "expect '(' after class name");
+    u8 arg_count = argument_list();
+
+    emit_bytes(OP_CALL_INIT, arg_count);
+}
+
 // ============================================================================
 // Parse Rules
 // ============================================================================
@@ -874,11 +923,12 @@ xen_parse_rule rules[] = {
     [TOKEN_NULL]             = {literal,    NULL,        PREC_NONE},
     [TOKEN_OR]               = {NULL,       or_,         PREC_OR},
     [TOKEN_RETURN]           = {NULL,       NULL,        PREC_NONE},
-    [TOKEN_THIS]             = {NULL,       NULL,        PREC_NONE},
     [TOKEN_TRUE]             = {literal,    NULL,        PREC_NONE},
     [TOKEN_VAR]              = {NULL,       NULL,        PREC_NONE},
     [TOKEN_WHILE]            = {NULL,       NULL,        PREC_NONE},
     [TOKEN_INCLUDE]          = {NULL,       NULL,        PREC_NONE},
+    [TOKEN_THIS]             = {this_,      NULL,        PREC_NONE},
+    [TOKEN_NEW]              = {new_expr,   NULL,        PREC_NONE},
     [TOKEN_ERROR]            = {NULL,       NULL,        PREC_NONE},
     [TOKEN_EOF]              = {NULL,       NULL,        PREC_NONE},
 };
@@ -1520,6 +1570,111 @@ static void const_var_declaration() {
     var_declaration_impl(XEN_TRUE);
 }
 
+static void property_declaration(bool is_private) {
+    consume(TOKEN_IDENTIFIER, "expect property name");
+    u8 name_constant = identifier_constant(&parser.previous);
+
+    if (match_token(TOKEN_EQUAL)) {
+        expression();
+    } else {
+        emit_byte(OP_NULL);
+    }
+
+    consume(TOKEN_SEMICOLON, "expect ';' after property declaration");
+
+    // Stack: [class, default_value]
+    emit_bytes(OP_PROPERTY, name_constant);
+    emit_byte(is_private ? 1 : 0);
+}
+
+static void method(xen_function_type type) {
+    xen_compiler compiler;
+    init_compiler(&compiler, type);
+    begin_scope();
+
+    consume(TOKEN_LEFT_PAREN, "expect '(' after method name");
+
+    if (!check(TOKEN_RIGHT_PAREN)) {
+        do {
+            current->function->arity++;
+            if (current->function->arity > 255) {
+                error_at_current("cannot have more than 255 parameters");
+            }
+            u8 constant = parse_variable("expect parameter name");
+            define_variable(constant);
+        } while (match_token(TOKEN_COMMA));
+    }
+
+    consume(TOKEN_RIGHT_PAREN, "expect ')' after parameters");
+    consume(TOKEN_LEFT_BRACE, "expect '{' before method body");
+    block();
+
+    xen_obj_func* fn = end_compiler();
+    emit_bytes(OP_CONSTANT, make_constant(OBJ_VAL(fn)));
+}
+
+static void method_declaration(bool is_private) {
+    consume(TOKEN_IDENTIFIER, "expect method name");
+    u8 name_constant = identifier_constant(&parser.previous);
+
+    xen_function_type type = TYPE_METHOD;
+    method(type);
+
+    emit_bytes(OP_METHOD, name_constant);
+    emit_byte(is_private ? 1 : 0);
+}
+
+static void init_declaration() {
+    xen_function_type type = TYPE_INITIALIZER;
+    method(type);
+    emit_byte(OP_INITIALIZER);
+}
+
+static void class_declaration() {
+    consume(TOKEN_IDENTIFIER, "expect class name");
+    xen_token class_name = parser.previous;
+    u8 name_constant     = identifier_constant(&class_name);
+
+    declare_variable();
+
+    emit_bytes(OP_CLASS, name_constant);
+    define_variable(name_constant);
+
+    class_compiler comp;
+    comp.enclosing = current_class;
+    comp.name      = class_name;
+    current_class  = &comp;
+
+    named_variable(class_name, XEN_FALSE);
+
+    consume(TOKEN_LEFT_BRACE, "expect '{' before class body");
+
+    while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+        bool is_private = XEN_FALSE;
+
+        if (match_token(TOKEN_PRIVATE)) {
+            is_private = XEN_TRUE;
+        }
+
+        if (match_token(TOKEN_FN)) {
+            method_declaration(is_private);
+        } else if (match_token(TOKEN_INIT)) {
+            init_declaration();
+        } else if (check(TOKEN_IDENTIFIER)) {
+            property_declaration(is_private);
+        } else {
+            error("expect property or method declaration");
+            advance();
+        }
+    }
+
+    consume(TOKEN_RIGHT_BRACE, "expect '}' after class body");
+    consume(TOKEN_SEMICOLON, "expect ';' after class definition");
+
+    emit_byte(OP_POP);  // Pop the class
+    current_class = current_class->enclosing;
+}
+
 static void function(xen_function_type type) {
     xen_compiler compiler;
     init_compiler(&compiler, type);
@@ -1578,6 +1733,8 @@ static void include_declaration() {
 static void declaration() {
     if (match_token(TOKEN_FN)) {
         fn_declaration();
+    } else if (match_token(TOKEN_CLASS)) {
+        class_declaration();
     } else if (match_token(TOKEN_CONST)) {
         const_var_declaration();
     } else if (match_token(TOKEN_VAR)) {

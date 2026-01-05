@@ -1,0 +1,18 @@
+include io;
+
+class Counter {
+    private count = 0;
+
+    fn increment() {
+        this.count = this.count + 1;
+    }
+
+    fn get() {
+        return this.count;
+    }
+};
+
+var c = new Counter();
+c.increment();
+c.increment();
+io.println(c.get());

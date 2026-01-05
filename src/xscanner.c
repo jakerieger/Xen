@@ -120,6 +120,7 @@ static xen_token_type identifier_type() {
                         return check_keyword(2, 3, "nst", TOKEN_CONST);
                 }
             }
+            break;
         case 'e':
             return check_keyword(1, 3, "lse", TOKEN_ELSE);
         case 'f':
@@ -143,13 +144,27 @@ static xen_token_type identifier_type() {
                         if (scanner.current - scanner.start == 2) {
                             return TOKEN_IN;
                         }
+                        if (scanner.current - scanner.start == 4) {
+                            return check_keyword(2, 2, "it", TOKEN_INIT);
+                        }
                         return check_keyword(2, 5, "clude", TOKEN_INCLUDE);
                 }
             }
+            break;
         case 'n':
-            return check_keyword(1, 3, "ull", TOKEN_NULL);
+            if (scanner.current - scanner.start > 1) {
+                switch (scanner.start[1]) {
+                    case 'u':
+                        return check_keyword(2, 2, "ll", TOKEN_NULL);
+                    case 'e':
+                        return check_keyword(2, 1, "w", TOKEN_NEW);
+                }
+            }
+            break;
         case 'o':
             return check_keyword(1, 1, "r", TOKEN_OR);
+        case 'p':
+            return check_keyword(1, 6, "rivate", TOKEN_PRIVATE);
         case 'r':
             return check_keyword(1, 5, "eturn", TOKEN_RETURN);
         case 't':
@@ -411,10 +426,12 @@ const char* xen_token_type_to_str(xen_token_type type) {
             return ":";
         case TOKEN_ARROW:
             return "=>";
+        case TOKEN_INIT:
+            return "init";
+        case TOKEN_NEW:
+            return "new";
+        case TOKEN_PRIVATE:
+            return "private";
     }
     return "";
 }
-
-#undef MAX_DIGIT_COUNT
-#undef MAX_IDENT_LENGTH
-#undef MAX_STRING_LENGTH
