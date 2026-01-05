@@ -11,17 +11,18 @@
 ## v0.5.0 (January 5, 2026)
 
 ### Added
-- Classes
-- Dictionaries
+- Classes ([#2](https://github.com/jakerieger/Xen/issues/2))
+- Dictionaries ([#3](https://github.com/jakerieger/Xen/issues/3))
 - A new `os` namespace with platform utilities such as `os.exit()` and `os.exec()`
 - Additional methods to the `io` namespace (`io.clear`, `io.pause`)
 - String character indexing with `[]`
+- Line history to REPL ([#9](https://github.com/jakerieger/Xen/issues/9))
 
 ### Changed
 - Moved `readtxt` and `readline` from `io` namespace to `os` namespace
 
 ### Fixed
-- Incorrect formatting when printing numbers
+- Incorrect formatting when printing numbers ([#8](https://github.com/jakerieger/Xen/issues/8))
 
 ### Known Bugs
 - Segfault when executing a line of code immediately following a runtime error. This needs to be investigated further but I've narrowed down a 
