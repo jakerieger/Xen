@@ -3,3 +3,4 @@ bin_win/
 obj/
 obj_win/
 releases/
+.vscode/

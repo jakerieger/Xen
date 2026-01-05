@@ -16,7 +16,7 @@ static void repl() {
     char line[MAX_LINE_SIZE];
 
     for (;;) {
-        printf("> ");
+        printf("=> ");
         if (!fgets(line, MAX_LINE_SIZE, stdin)) {
             printf("\n");
             break;

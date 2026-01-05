@@ -7,42 +7,88 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
+STARTUP_DIR=$(pwd)
+
 echo "Creating distributables for Xen v$VERSION"
 
 make clean
 make release
 make windows-release
 
-REL_DIR=./releases/$VERSION
+REL_DIR=/home/x/Code/Xen/releases/$VERSION
+
+if [ -e "$REL_DIR" ]; then
+    rm -rf $REL_DIR
+fi
+
 mkdir -p "$REL_DIR/linux"
 mkdir -p "$REL_DIR/windows"
 
-LINUX_BIN_TAR="$REL_DIR/linux/Xen-$VERSION-linux-x64.tar.gz"
-WINDOWS_BIN_ZIP="$REL_DIR/windows/Xen-$VERSION-windows-x64.zip"
-WINDOWS_EXE="$REL_DIR/windows/Xen-$VERSION-windows-x64.exe"
-SOURCE_TAR="$REL_DIR/Xen-$VERSION.tar.gz"
+make_linux_rpm() {
+    RPMBUILD_ROOT="/home/x/rpmbuild"
+    LINUX_RPM_TAR="$RPMBUILD_ROOT/SOURCES/Xen-$VERSION.tar.gz"
+    RPM_TMP_DIR="$RPMBUILD_ROOT/SOURCES/Xen-$VERSION"
 
-tar -czf $LINUX_BIN_TAR bin/ README.md LICENSE
-zip -r $WINDOWS_BIN_ZIP bin_win/ README.md LICENSE
-makensis -DVERSION=$VERSION scripts/windows_installer.nsi
-tar -czf $SOURCE_TAR src/ examples/ .clang-format README.md LICENSE Makefile
+    mkdir -p $RPM_TMP_DIR
+    cp -r src examples README.md LICENSE Makefile $RPM_TMP_DIR/
+    cd $RPM_TMP_DIR/../
+    tar -czf $LINUX_RPM_TAR Xen-$VERSION/
+    rm -rf $RPM_TMP_DIR
+    rpmbuild -ba $RPMBUILD_ROOT/SPECS/xen.spec
 
-CHECKSUM_LINUX=$(sha256sum $LINUX_BIN_TAR | awk '{print $1}')
-CHECKSUM_WINDOWS=$(sha256sum $WINDOWS_BIN_ZIP | awk '{print $1}')
-CHECKSUM_WINDOWS_EXE=$(sha256sum $WINDOWS_EXE | awk '{print $1}')
-CHECKSUM_SOURCE=$(sha256sum $SOURCE_TAR | awk '{print $1}')
+    cd ../RPMS
+    find . -name "Xen-$VERSION-*.rpm" ! -name "*debug*" -exec cp {} $REL_DIR/linux/Xen-$VERSION-linux-x64.rpm \;
 
-SIZE_LINUX=$(stat -c%s $LINUX_BIN_TAR)
-SIZE_WINDOWS=$(stat -c%s $WINDOWS_BIN_ZIP)
-SIZE_WINDOWS_EXE=$(stat -c%s $WINDOWS_EXE)
-SIZE_SOURCE=$(stat -c%s $SOURCE_TAR)
+    cd $STARTUP_DIR
+}
 
-cat >"$REL_DIR/checksums.txt" <<EOF
-$CHECKSUM_LINUX  Xen-$VERSION-linux-x64.tar.gz  $SIZE_LINUX bytes
-$CHECKSUM_WINDOWS  Xen-$VERSION-windows-x64.zip  $SIZE_WINDOWS bytes
-$CHECKSUM_WINDOWS_EXE  Xen-$VERSION-windows-x64.exe  $SIZE_WINDOWS_EXE bytes
-$CHECKSUM_SOURCE  Xen-$VERSION.tar.gz  $SIZE_SOURCE bytes
-EOF
+make_linux_deb() {
+    DEB_ROOT="$REL_DIR/linux/Xen-$VERSION-linux-x64"
+    mkdir -p "$DEB_ROOT/DEBIAN"
+    mkdir -p "$DEB_ROOT/usr/bin"
+    mkdir -p "$DEB_ROOT/usr/share/xen/examples"
+    mkdir -p "$DEB_ROOT/usr/share/doc/xen"
+
+    cp bin/xen "$DEB_ROOT/usr/bin/"
+    cp -r examples "$DEB_ROOT/usr/share/xen/"
+    cp README.md LICENSE "$DEB_ROOT/usr/share/doc/xen/"
+    cp specs/xen.control "$DEB_ROOT/DEBIAN/control"
+
+    dpkg-deb --build $DEB_ROOT
+    rm -rf $DEB_ROOT
+}
+
+make_linux_tarball() {
+    LINUX_BIN_TAR="$REL_DIR/linux/Xen-$VERSION-linux-x64.tar.gz"
+    tar -czf $LINUX_BIN_TAR bin/ examples/ README.md LICENSE
+}
+
+make_windows_zip() {
+    WINDOWS_BIN_ZIP="$REL_DIR/windows/Xen-$VERSION-windows-x64.zip"
+    zip -r $WINDOWS_BIN_ZIP bin_win/ README.md LICENSE
+}
+
+make_windows_exe() {
+    FILENAME="Xen-$VERSION-windows-x64.exe"
+    WINDOWS_EXE="$REL_DIR/windows/$FILENAME"
+    (cd specs && wine64 /home/x/.wine/drive_c/Program\ Files\ \(x86\)/Inno\ Setup\ 6/ISCC.exe xen.iss)
+    mv specs/$FILENAME "$REL_DIR/windows/"
+}
+
+make_source_tarball() {
+    SOURCE_TAR="$REL_DIR/Xen-$VERSION.tar.gz"
+    tar -czf $SOURCE_TAR src/ examples/ .clang-format README.md LICENSE Makefile
+}
+
+# Linux
+make_linux_rpm
+make_linux_deb
+make_linux_tarball
+# Windows
+make_windows_zip
+make_windows_exe
+# Source Code
+make_source_tarball
 
 echo ""
 echo "=== DONE ==="

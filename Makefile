@@ -58,6 +58,12 @@ clean_build_win:
 run: $(TARGET)
 	./$(TARGET)
 
+PREFIX ?= /usr/local
+BINDIR = $(PREFIX)/bin
+
+install: $(TARGET)
+	install -D -m 0755 $(TARGET) $(DESTDIR)$(BINDIR)/xen
+
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR) $(WIN_OBJ_DIR) $(WIN_BIN_DIR)
 

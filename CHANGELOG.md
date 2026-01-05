@@ -1,11 +1,31 @@
 # Changelog
 
 ## Table of Contents
+- [v0.5.0](#v050-january-5-2026)
 - [v0.4.1](#v041-january-4-2026)
 - [v0.4.0](#v040-january-3-2026)
 - [v0.3.0](#v030-january-2-2026)
 - [v0.2.0](#v020-january-2-2026)
 - [v0.1.0](#v010-january-1-2026)
+
+## v0.5.0 (January 5, 2026)
+
+### Added
+- Classes
+- Dictionaries
+- A new `os` namespace with platform utilities such as `os.exit()` and `os.exec()`
+- Additional methods to the `io` namespace (`io.clear`, `io.pause`)
+- String character indexing with `[]`
+
+### Changed
+- Moved `readtxt` and `readline` from `io` namespace to `os` namespace
+
+### Fixed
+- Incorrect formatting when printing numbers
+
+### Known Bugs
+- Segfault when executing a line of code immediately following a runtime error. This needs to be investigated further but I've narrowed down a 
+method for reproducing it consistently.
 
 ## v0.4.1 (January 4, 2026)
 
