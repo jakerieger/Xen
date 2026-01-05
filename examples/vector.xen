@@ -1,0 +1,16 @@
+include io;
+include math;
+
+var vec = { "x": 2, "y": 4 };
+io.println(vec);
+
+fn d2r(d) => d * math.PI / 180
+
+fn rotate(vector, rot_x, rot_y) {
+    vector["x"] = d2r(rot_x);
+    vector["y"] = d2r(rot_y);
+    return vector;
+}
+
+rotate(vec, 45, 90);
+io.println(vec);
