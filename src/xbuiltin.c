@@ -337,11 +337,29 @@ static xen_value io_input(i32 argc, xen_value* args) {
     return NULL_VAL;
 }
 
+static xen_value io_clear(i32 argc, xen_value* args) {
+    XEN_UNUSED(argc);
+    XEN_UNUSED(args);
+    printf("\033[2J\033[H");  // should be at least somewhat cross-platform
+    return BOOL_VAL(XEN_TRUE);
+}
+
+static xen_value io_pause(i32 argc, xen_value* args) {
+    XEN_UNUSED(argc);
+    XEN_UNUSED(args);
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+        ;
+    return NUMBER_VAL(c);
+}
+
 xen_obj_namespace* xen_builtin_io() {
     xen_obj_namespace* io = xen_obj_namespace_new("io");
     xen_obj_namespace_set(io, "println", OBJ_VAL(xen_obj_native_func_new(io_println, "println")));
     xen_obj_namespace_set(io, "print", OBJ_VAL(xen_obj_native_func_new(io_print, "print")));
     xen_obj_namespace_set(io, "input", OBJ_VAL(xen_obj_native_func_new(io_input, "input")));
+    xen_obj_namespace_set(io, "clear", OBJ_VAL(xen_obj_native_func_new(io_clear, "clear")));
+    xen_obj_namespace_set(io, "pause", OBJ_VAL(xen_obj_native_func_new(io_pause, "pause")));
     return io;
 }
 

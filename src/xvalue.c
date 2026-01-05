@@ -16,21 +16,16 @@ bool xen_value_equal(xen_value a, xen_value b) {
             xen_obj* obj_a = VAL_AS_OBJ(a);
             xen_obj* obj_b = VAL_AS_OBJ(b);
 
-            // Same pointer = definitely equal
             if (obj_a == obj_b)
                 return XEN_TRUE;
 
-            // Different types = not equal
             if (obj_a->type != obj_b->type)
                 return XEN_FALSE;
 
-            // Compare based on object type
             switch (obj_a->type) {
                 case OBJ_STRING: {
                     xen_obj_str* str_a = (xen_obj_str*)obj_a;
                     xen_obj_str* str_b = (xen_obj_str*)obj_b;
-                    /* With string interning, same hash + same length + same pointer should suffice,
-                       but let's be thorough in case strings bypass interning */
                     if (str_a->length != str_b->length)
                         return XEN_FALSE;
                     if (str_a->hash != str_b->hash)

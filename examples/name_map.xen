@@ -1,0 +1,44 @@
+include io;
+
+var names = {};
+
+fn get_names() {
+    var should_exit = false;
+
+    while (!should_exit) {
+        io.clear();
+        io.println("Names: ", names);
+        io.println("Commands: input  edit  exit");
+        io.println("Enter a command below:");
+        const var cmd = io.input("> ");
+        if (cmd == "input") {
+            io.clear();
+            const var name = io.input("(name)> ");
+            const var age = number(io.input("(age)> "));
+            names[name] = age;
+            io.println("Added { ", name, ", ", age, " }");
+            io.pause();
+        } else if (cmd == "edit") {
+            io.clear();
+            const var name = io.input("(name)> ");
+            if (names[name] != null) {
+                io.println("Editing: ", name);
+                const var age = number(io.input("(age)> "));
+                names[name] = age;
+                io.println("Updated { ", name, ", ", age, " }");
+            } else {
+                io.println("Person not found");
+            }
+            io.pause();
+        } else if (cmd == "exit") {
+            should_exit = true;
+        } else {
+            io.println("Command '", cmd, "' does not exist");
+            io.pause();
+        }
+    }
+
+    io.clear();
+    io.println("Goodbye!");
+}
+get_names();

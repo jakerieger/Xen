@@ -488,9 +488,7 @@ static xen_exec_result run() {
                     xen_value result;
 
                     if (!xen_obj_dict_get(dict, index, &result)) {
-                        // key not found
-                        runtime_error("key '%s' does not exist", OBJ_AS_CSTRING(index));
-                        return EXEC_RUNTIME_ERROR;
+                        stack_push(NULL_VAL);
                     } else {
                         stack_push(result);
                     }
