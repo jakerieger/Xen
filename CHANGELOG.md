@@ -1,6 +1,7 @@
 # Changelog
 
 ## Table of Contents
+- [v0.5.2](#v052-january-7-2026)
 - [v0.5.1](#v051-january-7-2026)
 - [v0.5.0](#v050-january-5-2026)
 - [v0.4.1](#v041-january-4-2026)
@@ -8,6 +9,10 @@
 - [v0.3.0](#v030-january-2-2026)
 - [v0.2.0](#v020-january-2-2026)
 - [v0.1.0](#v010-january-1-2026)
+
+## v0.5.2 (January 7, 2026)
+
+Xen v0.5.2 brings support to both x64 and ARM64 macOS systems, as well as some small bug fixes and improvements.
 
 ## v0.5.1 (January 7, 2026)
 

@@ -3,11 +3,9 @@
 
 set -e
 
-# Project configuration
 PROJECT_NAME="xen"
 SRC_DIR="src"
 
-# Platform configurations: name, compiler, exe_suffix
 PLATFORMS=(
     "linux:gcc:"
     "windows:x86_64-w64-mingw32-gcc:.exe"
@@ -15,11 +13,9 @@ PLATFORMS=(
     "macos-arm:arm64-apple-darwin25.2-cc:"
 )
 
-# Common flags
 CFLAGS_COMMON="-w -std=c11 -D_DEFAULT_SOURCE"
 LDFLAGS="-lm"
 
-# Find all source files
 SOURCES=$(find "$SRC_DIR" -name "*.c" | sort)
 
 generate_ninja() {
@@ -34,7 +30,6 @@ generate_ninja() {
     local exe_name="${PROJECT_NAME}${exe_suffix}"
     local ninja_file="${build_dir}/build.ninja"
 
-    # Set config-specific flags
     local config_flags=""
     if [ "$config" = "debug" ]; then
         config_flags="-O0 -g -DDEBUG"
@@ -42,10 +37,8 @@ generate_ninja() {
         config_flags="-O2 -DNDEBUG"
     fi
 
-    # Create build directory
     mkdir -p "$build_dir"
 
-    # Generate build.ninja
     cat >"$ninja_file" <<EOF
 # Auto-generated Ninja build file for ${platform} (${config})
 # Regenerate with: ./generate_build.sh
@@ -71,7 +64,6 @@ rule link
 # Build statements
 EOF
 
-    # Generate compile statements for each source file
     local objects=""
     for src in $SOURCES; do
         local rel_src="${src#${SRC_DIR}/}"
@@ -84,15 +76,12 @@ EOF
 
     echo "" >>"$ninja_file"
 
-    # Generate link statement
     echo "build ${bin_dir}/${exe_name}: link${objects}" >>"$ninja_file"
     echo "" >>"$ninja_file"
 
-    # Default target
     echo "default ${bin_dir}/${exe_name}" >>"$ninja_file"
     echo "" >>"$ninja_file"
 
-    # Phony targets
     cat >>"$ninja_file" <<EOF
 # Phony targets
 build run: phony ${bin_dir}/${exe_name}
@@ -105,14 +94,12 @@ EOF
     echo "Generated: ${ninja_file}"
 }
 
-# Clean old build directory
 if [ "$1" = "clean" ]; then
     echo "Cleaning build directory..."
     rm -rf build/
     exit 0
 fi
 
-# Generate build files for all platforms and configurations
 echo "Generating Ninja build files..."
 echo ""
 
@@ -123,7 +110,6 @@ for platform_config in "${PLATFORMS[@]}"; do
     generate_ninja "$platform" "$compiler" "$exe_suffix" "release"
 done
 
-# Create a master build script for convenience
 cat >build.sh <<'EOF'
 #!/usr/bin/env bash
 # Convenience build script

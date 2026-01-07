@@ -41,7 +41,30 @@ io.println(maserati.show_year()); // 2019
 
 ## Getting Started
 
-If you want to try the current version of Xen for yourself, you can download [precompiled binaries](https://github.com/jakerieger/Xen/releases/latest) or download and compile the source code yourself. You can also checkout [Xen's "Get Started" guide](https://jakerieger.github.io/Xen/get-started.html) for a quick guide on getting up and running with programming in Xen.
+If you want to try Xen out, you can download a pre-compiled binaries from our [releases](https://github.com/jakerieger/Xen/releases/latest).
+
+If you prefer to build from source the process is pretty straight-forward:
+
+### 1. Clone the repository
+
+```
+$ git clone https://github.com/jakerieger/Xen
+$ cd Xen
+```
+
+### 2. Run the configuration script
+
+```
+$ ./generate_build.sh
+```
+
+### 3. Build
+
+```
+$ ./build.sh <platform> # i.e. linux-debug
+```
+
+The final binary will be located in the `build` directory.
 
 ## Examples
 
