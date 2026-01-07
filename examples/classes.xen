@@ -19,7 +19,7 @@ class Car {
     fn show_year() => this.year
 };
 
-var maserati = new Car(2019, "Maserati", "Levante");
+const var maserati = new Car(2019, "Maserati", "Levante");
 io.println(maserati); // <Car : instance>
 
 io.println(maserati.model); // Levante
