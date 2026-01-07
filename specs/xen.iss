@@ -1,10 +1,10 @@
 [Setup]
 AppName=Xen
-AppVersion=0.5.0
+AppVersion=0.5.1
 DefaultDirName={commonpf}\Xen
 DefaultGroupName=Xen
 OutputDir=.
-OutputBaseFilename=Xen-0.5.0-windows-x64
+OutputBaseFilename=Xen-0.5.1-windows-x64
 Compression=lzma2
 SolidCompression=yes
 
