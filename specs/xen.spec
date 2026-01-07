@@ -36,5 +36,5 @@ cp -r examples $RPM_BUILD_ROOT%{_datadir}/xen/
 %{_datadir}/xen/examples/*
 
 %changelog
-* Mon Jan 07 2026 Jake Rieger <contact.jakerieger@gmail.com> - 0.5.1-1
+* Wed Jan 07 2026 Jake Rieger <contact.jakerieger@gmail.com> - 0.5.1-1
 - bug fixes and improvements

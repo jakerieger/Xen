@@ -5,5 +5,4 @@ Priority: optional
 Architecture: amd64
 Maintainer: Jake Rieger <contact.jakerieger@gmail.com>
 Description: Xen
- Xen programming language interpreter and tools.
- 
+ Xen programming language interpreter and tools. 
