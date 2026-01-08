@@ -1,5 +1,6 @@
 .cache/
 .vscode/
+.VSCodeCounter/
 releases/
 build/
 build.sh

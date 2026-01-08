@@ -858,8 +858,14 @@ static void new_expr(bool can_assign) {
 
     consume(TOKEN_IDENTIFIER, "expect class name after 'new'");
     u8 name_constant = identifier_constant(&parser.previous);
-
     emit_bytes(OP_GET_GLOBAL, name_constant);
+
+    // Handle dotted access (e.g., net.TCPListener)
+    while (match_token(TOKEN_DOT)) {
+        consume(TOKEN_IDENTIFIER, "expect property name after '.'");
+        u8 prop_constant = identifier_constant(&parser.previous);
+        emit_bytes(OP_GET_PROPERTY, prop_constant);
+    }
 
     consume(TOKEN_LEFT_PAREN, "expect '(' after class name");
     u8 arg_count = argument_list();
