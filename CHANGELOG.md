@@ -1,7 +1,7 @@
 # Changelog
 
 ## Table of Contents
-- [v0.5.2](#v053-january-8-2026)
+- [v0.5.3](#v053-january-8-2026)
 - [v0.5.2](#v052-january-7-2026)
 - [v0.5.1](#v051-january-7-2026)
 - [v0.5.0](#v050-january-5-2026)
