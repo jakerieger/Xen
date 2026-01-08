@@ -5,6 +5,7 @@
 #include "xalloc.h"
 #include "xchunk.h"
 #include "xerr.h"
+#include "xmem.h"
 
 #include <math.h>
 #include <float.h>
@@ -128,6 +129,60 @@ inline static u32 xen_hash_string(const char* key, i32 length) {
     }
 
     return hash;
+}
+
+inline static char* xen_strdup(char* src) {
+    char* str;
+    char* p;
+    i32 len = 0;
+
+    while (src[len])
+        len++;
+    str = malloc(len + 1);
+    p   = str;
+    while (*src)
+        *p++ = *src++;
+    *p = '\0';
+    return str;
+}
+
+/// @brief Decodes string literals and applies escape sequences
+inline static char* decode_string_literal(const char* src, i32 src_len, i32* out_len) {
+    char* dst = XEN_ALLOCATE(char, src_len + 1);
+    i32 i = 0, j = 0;
+
+    while (i < src_len) {
+        if (src[i] == '\\' && i + 1 < src_len) {
+            i++;
+            switch (src[i]) {
+                case 'n':
+                    dst[j++] = '\n';
+                    break;
+                case 't':
+                    dst[j++] = '\t';
+                    break;
+                case 'r':
+                    dst[j++] = '\r';
+                    break;
+                case '\\':
+                    dst[j++] = '\\';
+                    break;
+                case '"':
+                    dst[j++] = '"';
+                    break;
+                default:
+                    dst[j++] = src[i];  // unknown escape
+                    break;
+            }
+        } else {
+            dst[j++] = src[i];
+        }
+        i++;
+    }
+
+    dst[j]   = '\0';
+    *out_len = j;
+    return dst;
 }
 
 #endif

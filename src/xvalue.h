@@ -19,6 +19,7 @@ typedef struct xen_obj_array         xen_obj_array;
 typedef struct xen_obj_bound_method  xen_obj_bound_method;
 typedef struct xen_obj_dict          xen_obj_dict;
 typedef struct xen_obj_class         xen_obj_class;
+typedef struct xen_obj_u8array       xen_obj_u8array;
 // clang-format on
 
 typedef enum {

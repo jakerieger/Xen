@@ -1,0 +1,25 @@
+include io;
+include net;
+
+const var PORT = 8080;
+
+fn run() {
+    const var l = new net.TcpListener(PORT);
+    l.bind_and_listen();
+
+    for (;;) {
+        var conn = l.accept();
+        var msg = conn.read();
+        if (msg != null) {
+            io.println("=== Client (", conn.remote_addr, ") ===");
+            io.println(msg);
+            const var resp = "HTTP/1.1 200 OK\nContent-Length: 5\n\nHello";
+            conn.send(resp);
+        }
+        conn.close();
+    }
+
+    l.close();
+}
+
+run();

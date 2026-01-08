@@ -8,36 +8,32 @@
 
 Xen is a loosely-typed, imperative scripting language written in C. Its syntax closesly resembles C-like languages and the bytecode compiler and VM is a mere 70Kb in total. Its primary purpose is to serve as a learning project for myself and a fun side project to work on in my free time. **It is not designed with the intent of being a serious, production-ready language.**
 
-![](docs/demo.gif)
-
 ```js
 include io;
+include net;
 
-class Car {
-    year;
-    make;
-    model;
+const var PORT = 8080;
 
-    init(year, make, model) {
-        this.year = year;
-        this.make = make;
-        this.model = model;
+fn run() {
+    const var l = new net.TcpListener(PORT);
+    l.bind_and_listen();
+
+    for (;;) {
+        var conn = l.accept();
+        var msg = conn.read();
+        if (msg != null) {
+            io.println("=== Client (", conn.remote_addr, ") ===");
+            io.println(msg);
+            const var resp = "HTTP/1.1 200 OK\nContent-Length: 5\n\nHello";
+            conn.send(resp);
+        }
+        conn.close();
     }
 
-    fn start_engine() {
-        if (this.year > 2000) { io.println("brrrrrrrrr"); }
-        else { io.println("chuggachuggachugga"); }
-    }
+    l.close();
+}
 
-    fn show_year() => this.year
-};
-
-const var maserati = new Car(2019, "Maserati", "Levante");
-io.println(maserati); // <Car : instance>
-
-io.println(maserati.model); // Levante
-maserati.start_engine(); // brrrrrrrrr
-io.println(maserati.show_year()); // 2019
+run();
 
 ```
 

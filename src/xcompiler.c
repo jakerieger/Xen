@@ -7,6 +7,7 @@
 #include "xvalue.h"
 #include "xtable.h"
 #include "xvm.h"
+#include "xutils.h"
 #include "builtin/xbuiltin.h"
 #include <math.h>
 #include <string.h>
@@ -91,12 +92,30 @@ static bool is_valid_namespace(const char* name, i32 length) {
     return XEN_FALSE;
 }
 
+#define MAX_INCLUDES 64
+#define MAX_PATH_LENGTH 256
+
+typedef struct {
+    char* paths[MAX_INCLUDES];
+    i32 count;
+} xen_include_tracker;
+
+typedef struct {
+    char path[MAX_PATH_LENGTH];
+    char* source;
+    xen_token_scanner scanner;
+    xen_token current;
+    xen_token previous;
+} xen_compile_context;
+
 // ============================================================================
 // Globals
 // ============================================================================
 
 xen_parser parser;
 xen_compiler* current = NULL;
+static xen_include_tracker include_tracker;
+static char current_file_path[MAX_PATH_LENGTH] = ".";
 
 // ============================================================================
 // Forward Declarations
@@ -107,6 +126,8 @@ static void statement();
 static void declaration();
 static xen_parse_rule* get_rule(xen_token_type);
 static void parse_precedence(xen_op_prec);
+static void compile_file_include(const char* path, const char* namespace_name);
+static char* load_file_source(const char* path);
 
 // ============================================================================
 // Helpers
@@ -174,6 +195,63 @@ static bool match_token(xen_token_type type) {
         return XEN_FALSE;
     advance();
     return XEN_TRUE;
+}
+
+static void include_tracker_init() {
+    include_tracker.count = 0;
+    for (i32 i = 0; i < MAX_INCLUDES; i++) {
+        include_tracker.paths[i] = NULL;
+    }
+}
+
+static void include_tracker_cleanup() {
+    for (i32 i = 0; i < include_tracker.count; i++) {
+        free(include_tracker.paths[i]);
+        include_tracker.paths[i] = NULL;
+    }
+    include_tracker.count = 0;
+}
+
+static bool is_already_included(const char* path) {
+    for (i32 i = 0; i < include_tracker.count; i++) {
+        if (strcmp(include_tracker.paths[i], path) == 0) {
+            return XEN_TRUE;
+        }
+    }
+    return XEN_FALSE;
+}
+
+static void mark_as_included(const char* path) {
+    if (include_tracker.count >= MAX_INCLUDES) {
+        error("too many includes");
+        return;
+    }
+    include_tracker.paths[include_tracker.count] = xen_strdup(path);
+    include_tracker.count++;
+}
+
+static void get_directory(const char* filepath, char* dir, size_t dir_size) {
+    strncpy(dir, filepath, dir_size - 1);
+    dir[dir_size - 1] = '\0';
+
+    char* last_slash = strrchr(dir, '/');
+#ifdef _WIN32
+    char* last_backslash = strrchr(dir, '\\');
+    if (last_backslash > last_slash)
+        last_slash = last_backslash;
+#endif
+
+    if (last_slash) {
+        *(last_slash + 1) = '\0';
+    } else {
+        strcpy(dir, "./");
+    }
+}
+
+static void resolve_include_path(const char* include_name, char* out_path, size_t out_size) {
+    char dir[MAX_PATH_LENGTH];
+    get_directory(current_file_path, dir, sizeof(dir));
+    snprintf(out_path, out_size, "%s%s.xen", dir, include_name);
 }
 
 // ============================================================================
@@ -1784,4 +1862,56 @@ xen_obj_func* xen_compile(const char* source) {
     const char* name = "main";
     fn->name         = xen_obj_str_copy(name, strlen(name));
     return parser.had_error ? NULL : fn;
+}
+
+static char* load_file_source(const char* path) {
+    return xen_read_file(path);
+}
+
+static void compile_namespaced_declarations(const char* namespace_name) {}
+
+static void compile_file_include(const char* path, const char* namespace_name) {
+    // Check for circular includes
+    if (is_already_included(path)) {
+        return;  // Silently skip - already included
+    }
+    mark_as_included(path);
+
+    // Load the source file
+    char* source = load_file_source(path);
+    if (!source) {
+        error("could not load include file");
+        return;
+    }
+
+    // Save current compilation context
+    xen_token_scanner saved_scanner = xen_scanner_save();
+    xen_token saved_current         = parser.current;
+    xen_token saved_previous        = parser.previous;
+    char saved_path[MAX_PATH_LENGTH];
+    strncpy(saved_path, current_file_path, MAX_PATH_LENGTH);
+
+    // Update current file path for nested includes
+    strncpy(current_file_path, path, MAX_PATH_LENGTH);
+
+    xen_scanner_init(source);
+    advance();
+
+    if (namespace_name != NULL) {
+        // Create namespace
+        compile_namespaced_declarations(namespace_name);
+    } else {
+        // Compile directly into global scope
+        while (!check(TOKEN_EOF)) {
+            declaration();
+        }
+    }
+
+    // Restore compilation context
+    xen_scanner_restore(saved_scanner);
+    parser.current  = saved_current;
+    parser.previous = saved_previous;
+    strncpy(current_file_path, saved_path, MAX_PATH_LENGTH);
+
+    free(source);
 }

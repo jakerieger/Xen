@@ -83,7 +83,15 @@ typedef struct {
 void xen_token_print(xen_token* token);
 const char* xen_token_type_to_str(xen_token_type type);
 
+typedef struct {
+    const char* start;
+    const char* current;
+    i32 line;
+} xen_token_scanner;
+
 void xen_scanner_init(const char* source);
 xen_token xen_scanner_emit();
+xen_token_scanner xen_scanner_save();
+void xen_scanner_restore(xen_token_scanner state);
 
 #endif

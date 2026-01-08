@@ -16,6 +16,7 @@
 #define TYPEID_DICT (VAL_OBJECT + OBJ_DICT)
 #define TYPEID_CLASS (VAL_OBJECT + OBJ_CLASS)
 #define TYPEID_INSTANCE (VAL_OBJECT + OBJ_INSTANCE)
+#define TYPEID_U8ARRAY (VAL_OBJECT + OBJ_U8ARRAY)
 
 inline static i32 xen_typeid_get(xen_value value) {
     switch (value.type) {
@@ -45,6 +46,8 @@ inline static i32 xen_typeid_get(xen_value value) {
                     return TYPEID_CLASS;
                 case OBJ_INSTANCE:
                     return TYPEID_NAMESPACE;
+                case OBJ_U8ARRAY:
+                    return TYPEID_U8ARRAY;
             }
         }
     }

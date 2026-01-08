@@ -15,6 +15,7 @@ typedef enum {
     OBJ_DICT,
     OBJ_CLASS,
     OBJ_INSTANCE,
+    OBJ_U8ARRAY
 } xen_obj_type;
 
 struct xen_obj {
@@ -104,6 +105,13 @@ typedef struct {
     xen_value* fields;  // property values, indexed by propery_def.index
 } xen_obj_instance;
 
+struct xen_obj_u8array {
+    xen_obj obj;
+    u8* values;
+    i32 count;
+    i32 capacity;
+};
+
 #define OBJ_TYPE(v) (VAL_AS_OBJ(v)->type)
 
 #define OBJ_IS_STRING(v) xen_obj_is_type(v, OBJ_STRING)
@@ -132,6 +140,9 @@ typedef struct {
 #define OBJ_IS_INSTANCE(value) xen_obj_is_type(value, OBJ_INSTANCE)
 #define OBJ_AS_CLASS(value) ((xen_obj_class*)VAL_AS_OBJ(value))
 #define OBJ_AS_INSTANCE(value) ((xen_obj_instance*)VAL_AS_OBJ(value))
+
+#define OBJ_IS_U8ARRAY(value) xen_obj_is_type(value, OBJ_U8ARRAY)
+#define OBJ_AS_U8ARRAY(value) ((xen_obj_u8array*)VAL_AS_OBJ(value))
 
 bool xen_obj_is_type(xen_value value, xen_obj_type type);
 void xen_obj_print(xen_value value);
@@ -185,5 +196,13 @@ i32 xen_find_property_index(xen_obj_class* class, xen_obj_str* name);
 bool xen_obj_class_is_property_private(xen_obj_class* class, xen_obj_str* name);
 void xen_obj_class_set_native_init(xen_obj_class* class, xen_native_fn init_fn);
 void xen_obj_class_add_native_method(xen_obj_class* class, const char* name, xen_native_fn method, bool is_private);
+
+xen_obj_u8array* xen_obj_u8array_new();
+xen_obj_u8array* xen_obj_u8array_new_with_capacity(i32 capacity);
+void xen_obj_u8array_push(xen_obj_u8array* arr, u8 value);
+u8 xen_obj_u8array_get(xen_obj_u8array* arr, i32 index);
+void xen_obj_u8array_set(xen_obj_u8array* arr, i32 index, u8 value);
+u8 xen_u8obj_array_pop(xen_obj_u8array* arr);
+i32 xen_obj_u8array_length(xen_obj_u8array* arr);
 
 #endif

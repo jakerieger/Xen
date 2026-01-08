@@ -13,48 +13,51 @@ static xen_value xen_builtin_typeof(i32 argc, xen_value* argv) {
     REQUIRE_ARG("type", 0, TYPEID_UNDEFINED);
     xen_value val = argv[0];
     const char* type_str;
+    i32 typeid = xen_typeid_get(val);
 
-    if (VAL_IS_BOOL(val)) {
-        type_str = "bool";
-    } else if (VAL_IS_NULL(val)) {
-        type_str = "null";
-    } else if (VAL_IS_NUMBER(val)) {
-        type_str = "number";
-    } else if (VAL_IS_OBJ(val)) {
-        switch (OBJ_TYPE(val)) {
-            case OBJ_STRING:
-                type_str = "string";
-                break;
-            case OBJ_FUNCTION:
-                type_str = "function";
-                break;
-            case OBJ_NATIVE_FUNC:
-                type_str = "native_function";
-                break;
-            case OBJ_NAMESPACE:
-                type_str = "namespace";
-                break;
-            case OBJ_ARRAY:
-                type_str = "array";
-                break;
-            case OBJ_DICT:
-                type_str = "dictionary";
-                break;
-            case OBJ_CLASS:
-                type_str = "class";
-                break;
-            case OBJ_INSTANCE:
-                type_str = "instance";
-                break;
-            case OBJ_BOUND_METHOD:
-                type_str = "bound_method";
-                break;
-            default:
-                type_str = "undefined";
-                break;
-        }
-    } else {
-        type_str = "undefined";
+    switch (typeid) {
+        case TYPEID_BOOL:
+            type_str = "Bool";
+            break;
+        case TYPEID_NULL:
+            type_str = "Null";
+            break;
+        case TYPEID_NUMBER:
+            type_str = "Number";
+            break;
+        case TYPEID_STRING:
+            type_str = "String";
+            break;
+        case TYPEID_FUNC:
+            type_str = "Function";
+            break;
+        case TYPEID_NATIVE_FUNC:
+            type_str = "Native_Function";
+            break;
+        case TYPEID_NAMESPACE:
+            type_str = "Namespace";
+            break;
+        case TYPEID_ARRAY:
+            type_str = "Array";
+            break;
+        case TYPEID_BOUND_METHOD:
+            type_str = "Bound_Method";
+            break;
+        case TYPEID_DICT:
+            type_str = "Dictionary";
+            break;
+        case TYPEID_CLASS:
+            type_str = "Class";
+            break;
+        case TYPEID_INSTANCE:
+            type_str = "Instance";
+            break;
+        case TYPEID_U8ARRAY:
+            type_str = "U8Array";
+            break;
+        case TYPEID_UNDEFINED:
+        default:
+            type_str = "Undefined";
     }
 
     return OBJ_VAL(xen_obj_str_copy(type_str, strlen(type_str)));

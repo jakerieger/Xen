@@ -568,12 +568,19 @@ static xen_exec_result run() {
             }
             case OP_ARRAY_LEN: {
                 xen_value array_val = stack_pop();
-                if (!OBJ_IS_ARRAY(array_val)) {
+                if (!OBJ_IS_ARRAY(array_val) && !OBJ_IS_U8ARRAY(array_val)) {
                     runtime_error("can only get length of arrays");
                     return EXEC_RUNTIME_ERROR;
                 }
-                xen_obj_array* arr = OBJ_AS_ARRAY(array_val);
-                stack_push(NUMBER_VAL(arr->array.count));
+
+                if (OBJ_IS_ARRAY(array_val)) {
+                    xen_obj_array* arr = OBJ_AS_ARRAY(array_val);
+                    stack_push(NUMBER_VAL(arr->array.count));
+                } else if (OBJ_IS_U8ARRAY(array_val)) {
+                    xen_obj_u8array* arr = OBJ_AS_U8ARRAY(array_val);
+                    stack_push(NUMBER_VAL(arr->count));
+                }
+
                 break;
             }
             case OP_DICT_NEW: {
@@ -614,6 +621,20 @@ static xen_exec_result run() {
                     }
 
                     stack_push(arr->array.values[idx]);
+                } else if (OBJ_IS_U8ARRAY(container)) {
+                    if (!VAL_IS_NUMBER(index)) {
+                        runtime_error("array index must be a number");
+                        return EXEC_RUNTIME_ERROR;
+                    }
+                    xen_obj_u8array* arr = OBJ_AS_U8ARRAY(container);
+                    i32 idx              = (i32)VAL_AS_NUMBER(index);
+
+                    if (idx < 0 || idx >= arr->count) {
+                        runtime_error("array index %d out of bounds (length %d)", idx, arr->count);
+                        return EXEC_RUNTIME_ERROR;
+                    }
+
+                    stack_push(NUMBER_VAL(arr->values[idx]));
                 } else if (OBJ_IS_DICT(container)) {
                     xen_obj_dict* dict = OBJ_AS_DICT(container);
                     xen_value result;
@@ -660,7 +681,20 @@ static xen_exec_result run() {
                         return EXEC_RUNTIME_ERROR;
                     }
                     arr->array.values[idx] = value;
+                } else if (OBJ_IS_U8ARRAY(container)) {
+                    // array assignment - index must be a number
+                    if (!VAL_IS_NUMBER(index)) {
+                        runtime_error("array index must be a number");
+                        return EXEC_RUNTIME_ERROR;
+                    }
+                    xen_obj_u8array* arr = OBJ_AS_U8ARRAY(container);
+                    i32 idx              = (i32)VAL_AS_NUMBER(index);
 
+                    if (idx < 0 || idx >= arr->count) {
+                        runtime_error("array index %d out of bounds (length %d)", idx, arr->count);
+                        return EXEC_RUNTIME_ERROR;
+                    }
+                    arr->values[idx] = (u8)VAL_AS_NUMBER(value);
                 } else if (OBJ_IS_DICT(container)) {
                     // dictionary assignment - creates or updates key
                     xen_obj_dict* dict = OBJ_AS_DICT(container);

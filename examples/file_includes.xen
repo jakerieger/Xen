@@ -2,4 +2,4 @@ include classes;
 include my_module::module;
 include io;
 
-module_hello();
+my_module.module_hello();

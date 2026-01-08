@@ -1,5 +1,6 @@
 #include "xbuiltin_net.h"
 #include "xbuiltin_common.h"
+#include "../xutils.h"
 
 //==============================================================//
 //                          Globals                             //
@@ -172,8 +173,10 @@ static xen_value tcp_stream_write(i32 argc, xen_value* args) {
         return NUMBER_VAL(-1);
     }
 
-    xen_obj_str* data     = OBJ_AS_STRING(args[1]);
-    ssize_t bytes_written = socket_write(fd, data->str, data->length);
+    xen_obj_str* data = OBJ_AS_STRING(args[1]);
+    i32 decoded_size;
+    const char* data_decoded = decode_string_literal(data->str, data->length, &decoded_size);
+    ssize_t bytes_written    = socket_write(fd, data_decoded, decoded_size);
 
     if (bytes_written < 0) {
         xen_runtime_error("[TcpStream] write() failed: %s", get_socket_error());
@@ -203,10 +206,12 @@ static xen_value tcp_stream_send(i32 argc, xen_value* args) {
     }
 
     xen_obj_str* data = OBJ_AS_STRING(args[1]);
+    i32 decoded_size;
+    const char* data_decoded = decode_string_literal(data->str, data->length, &decoded_size);
 #ifdef PLATFORM_WINDOWS
-    ssize_t bytes_sent = send(fd, data->str, data->length, 0);
+    ssize_t bytes_sent = send(fd, data_decoded, decoded_size, 0);
 #else
-    ssize_t bytes_sent = send(fd, data->str, data->length, 0);
+    ssize_t bytes_sent = send(fd, data_decoded, decoded_size, 0);
 #endif
 
     if (bytes_sent < 0) {
@@ -461,6 +466,74 @@ static xen_value tcp_listener_listen(i32 argc, xen_value* args) {
     return BOOL_VAL(XEN_TRUE);
 }
 
+static xen_value tcp_listener_bind_and_listen(i32 argc, xen_value* args) {
+    if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
+        return NULL_VAL;
+    }
+
+    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    i32 port               = (i32)VAL_AS_NUMBER(self->fields[0]);
+    socket_t socket_fd     = (socket_t)VAL_AS_NUMBER(self->fields[1]);
+
+    if (socket_fd != INVALID_SOCKET_FD) {
+        xen_runtime_error("[TcpListener] Socket is already bound");
+        return BOOL_VAL(XEN_FALSE);
+    }
+
+    socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_fd == INVALID_SOCKET_FD) {
+        xen_runtime_error("[TcpListener] Failed to create socket: %s", get_socket_error());
+        return BOOL_VAL(XEN_FALSE);
+    }
+
+    // Set SO_REUSEADDR to allow quick rebinding
+    int opt = 1;
+#ifdef PLATFORM_WINDOWS
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, (const char*)&opt, sizeof(opt)) < 0) {
+#else
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+#endif
+        CLOSE_SOCKET(socket_fd);
+        xen_runtime_error("[TcpListener] setsockopt() failed: %s", get_socket_error());
+        return BOOL_VAL(XEN_FALSE);
+    }
+
+    struct sockaddr_in address;
+    memset(&address, 0, sizeof(address));
+    address.sin_family      = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port        = htons((u16)port);
+
+    if (bind(socket_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+        CLOSE_SOCKET(socket_fd);
+        xen_runtime_error("[TcpListener] bind() failed on port %d: %s", port, get_socket_error());
+        return BOOL_VAL(XEN_FALSE);
+    }
+
+    printf("[TcpListener] Binding to port %d\n", port);
+    self->fields[1] = NUMBER_VAL((double)socket_fd);
+
+    if (socket_fd == INVALID_SOCKET_FD) {
+        xen_runtime_error("[TcpListener] Socket not bound - call bind() first");
+        return BOOL_VAL(XEN_FALSE);
+    }
+
+    i32 backlog = 5;
+    if (argc > 1 && VAL_IS_NUMBER(args[1])) {
+        backlog = (i32)VAL_AS_NUMBER(args[1]);
+        if (backlog < 1)
+            backlog = 1;
+    }
+
+    if (listen(socket_fd, backlog) < 0) {
+        xen_runtime_error("[TcpListener] listen() failed: %s", get_socket_error());
+        return BOOL_VAL(XEN_FALSE);
+    }
+
+    printf("[TcpListener] Listening with backlog %d\n", backlog);
+    return BOOL_VAL(XEN_TRUE);
+}
+
 // Method: accept() -> returns TcpStream instance
 static xen_value tcp_listener_accept(i32 argc, xen_value* args) {
     if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
@@ -544,6 +617,7 @@ static xen_obj_class* create_tcp_listener_class() {
 
     xen_obj_class_add_native_method(class, "bind", tcp_listener_bind, XEN_FALSE);
     xen_obj_class_add_native_method(class, "listen", tcp_listener_listen, XEN_FALSE);
+    xen_obj_class_add_native_method(class, "bind_and_listen", tcp_listener_bind_and_listen, XEN_FALSE);
     xen_obj_class_add_native_method(class, "accept", tcp_listener_accept, XEN_FALSE);
     xen_obj_class_add_native_method(class, "close", tcp_listener_close, XEN_FALSE);
 

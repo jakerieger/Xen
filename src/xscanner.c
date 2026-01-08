@@ -2,12 +2,6 @@
 #include "xalloc.h"
 #include "xcommon.h"
 
-typedef struct {
-    const char* start;
-    const char* current;
-    i32 line;
-} xen_token_scanner;
-
 xen_token_scanner scanner;
 
 void xen_scanner_init(const char* source) {
@@ -446,4 +440,12 @@ const char* xen_token_type_to_str(xen_token_type type) {
             return "as";
     }
     return "";
+}
+
+xen_token_scanner xen_scanner_save() {
+    return scanner;
+}
+
+void xen_scanner_restore(xen_token_scanner state) {
+    scanner = state;
 }

@@ -74,6 +74,56 @@ static xen_value os_readlines(i32 argc, xen_value* argv) {
     }
 }
 
+static xen_value os_readbytes(i32 argc, xen_value* argv) {
+    REQUIRE_ARG("filename", 0, TYPEID_STRING);
+    xen_value val = argv[0];
+
+    if (val.type == VAL_OBJECT && OBJ_IS_STRING(val)) {
+        FILE* fp = fopen(OBJ_AS_CSTRING(val), "rb");
+        if (!fp) {
+            xen_runtime_error("failed to open file: %s", OBJ_AS_CSTRING(val));
+            return NULL_VAL;
+        }
+
+        // Get file size
+        if (fseek(fp, 0, SEEK_END) != 0) {
+            fclose(fp);
+            return NULL_VAL;
+        }
+
+        long size = ftell(fp);
+        if (size < 0) {
+            fclose(fp);
+            return NULL_VAL;
+        }
+        rewind(fp);
+
+        u8* buffer = malloc((size_t)size);
+        if (!buffer) {
+            fclose(fp);
+            return NULL_VAL;
+        }
+
+        size_t read = fread(buffer, 1, (size_t)size, fp);
+        fclose(fp);
+
+        if (read != (size_t)size) {
+            free(buffer);
+            return NULL_VAL;
+        }
+
+        xen_obj_u8array* arr = xen_obj_u8array_new_with_capacity(size);
+        arr->count           = size;
+        memcpy(arr->values, buffer, size);
+        free(buffer);
+
+        return OBJ_VAL(arr);
+    } else {
+        xen_runtime_error("filename argument must be of type string (got '%s')", xen_value_type_to_str(val));
+        return NULL_VAL;
+    }
+}
+
 static xen_value os_exit(i32 argc, xen_value* argv) {
     i32 exit_code = 0;
     if (argc > 0 && VAL_IS_NUMBER(argv[0]))
@@ -307,6 +357,7 @@ xen_obj_namespace* xen_builtin_os() {
     xen_obj_namespace* os = xen_obj_namespace_new("os");
     xen_obj_namespace_set(os, "readtxt", OBJ_VAL(xen_obj_native_func_new(os_readtxt, "readtxt")));
     xen_obj_namespace_set(os, "readlines", OBJ_VAL(xen_obj_native_func_new(os_readlines, "readlines")));
+    xen_obj_namespace_set(os, "readbytes", OBJ_VAL(xen_obj_native_func_new(os_readbytes, "readbytes")));
     xen_obj_namespace_set(os, "exit", OBJ_VAL(xen_obj_native_func_new(os_exit, "exit")));
     xen_obj_namespace_set(os, "exec", OBJ_VAL(xen_obj_native_func_new(os_exec, "exec")));
     xen_obj_namespace_set(os, "mkdir", OBJ_VAL(xen_obj_native_func_new(os_mkdir, "mkdir")));
