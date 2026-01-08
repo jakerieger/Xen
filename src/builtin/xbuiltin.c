@@ -68,8 +68,8 @@ void xen_builtins_register() {
     xen_vm_register_namespace("datetime", OBJ_VAL(xen_builtin_datetime()));
     xen_vm_register_namespace("array", OBJ_VAL(xen_builtin_array()));
     xen_vm_register_namespace("os", OBJ_VAL(xen_builtin_os()));
-    xen_vm_register_namespace("net", OBJ_VAL(xen_builtin_net()));
     xen_vm_register_namespace("dict", OBJ_VAL(xen_builtin_dict()));
+    xen_vm_register_namespace("net", OBJ_VAL(xen_builtin_net()));
 
     // register globals
     define_native_fn("typeof", xen_builtin_typeof);

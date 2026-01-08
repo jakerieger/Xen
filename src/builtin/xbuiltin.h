@@ -11,9 +11,9 @@
 #include "xbuiltin_dict.h"
 #include "xbuiltin_io.h"
 #include "xbuiltin_math.h"
-#include "xbuiltin_net.h"
 #include "xbuiltin_os.h"
 #include "xbuiltin_string.h"
+#include "xbuiltin_net.h"
 
 void xen_builtins_register();
 void xen_vm_register_namespace(const char* name, xen_value ns);
