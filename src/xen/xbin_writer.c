@@ -28,6 +28,12 @@ static void update_position_consumed(xen_bin_writer* writer, size_t size) {
     writer->pos += size;
 }
 
+void xen_bin_write_bool(xen_bin_writer* writer, bool value) {
+    const size_t size = sizeof(bool);
+    memcpy(writer->data + writer->pos, &value, size);
+    update_position_consumed(writer, size);
+}
+
 void xen_bin_write_i8(xen_bin_writer* writer, i8 value) {
     const size_t size = sizeof(i8);
     memcpy(writer->data + writer->pos, &value, size);

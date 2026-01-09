@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 
@@ -22,7 +23,6 @@ typedef __int128_t i128;
 typedef __uint128_t u128;
 typedef float f32;
 typedef double f64;
-typedef i8 bool;
 typedef u8 byte;
 
 #define XEN_ANY void*
@@ -35,14 +35,14 @@ typedef u8 byte;
 #ifndef NDEBUG
     #define XEN_DEBUG_PRINT(fmt, ...) fprintf(stderr, "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 #else
-    #define XEN_DEBUG_PRINT(fmt, ...)                                                                                   \
+    #define XEN_DEBUG_PRINT(fmt, ...)                                                                                  \
         do {                                                                                                           \
         } while (0)
 #endif
 
 #define XEN_ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
-#define xen_container_of(ptr, type, member)                                                                             \
+#define xen_container_of(ptr, type, member)                                                                            \
     ({                                                                                                                 \
         const __typeof__(((type*)0)->member)* __mptr = (ptr);                                                          \
         (type*)((char*)__mptr - offsetof(type, member));                                                               \
@@ -59,14 +59,14 @@ static inline void xen_cleanup_free(void* p) {
     free(*(void**)p);
 }
 
-#define XEN_MIN(a, b)                                                                                                   \
+#define XEN_MIN(a, b)                                                                                                  \
     ({                                                                                                                 \
         __typeof__(a) _a = (a);                                                                                        \
         __typeof__(b) _b = (b);                                                                                        \
         _a < _b ? _a : _b;                                                                                             \
     })
 
-#define XEN_MAX(a, b)                                                                                                   \
+#define XEN_MAX(a, b)                                                                                                  \
     ({                                                                                                                 \
         __typeof__(a) _a = (a);                                                                                        \
         __typeof__(b) _b = (b);                                                                                        \
