@@ -19,14 +19,14 @@ Xen is a loosely-typed, imperative scripting language written in C. Its syntax c
 ## Getting Started
 
 If you want to try Xen out, you can download one of the pre-compiled binaries from our [releases](https://github.com/jakerieger/Xen/releases/latest).
-Xen currently has releases for Windows (x64), Linux (x64), and macOS (x64/ARM64).
+Xen currently has releases for Windows (*x64*), Linux (*x64*), and macOS (*x64/ARM64*).
 
 If you prefer to build from source, you need to be on a system that supports makefiles.
 
 ### 1. Clone the repository
 
 ```
-$ git clone https://github.com/jakerieger/Xen
+$ git clone https://github.com/XenLanguage/Xen
 ```
 
 ### 2. Run make
@@ -54,7 +54,8 @@ Since Xen is developed by one guy (me) and since I only have one PC, builds for 
 $ make all-platforms
 ```
 
-> [!IMPORTANT] **Building from source on platforms other than Linux is not tested.**
+> [!IMPORTANT]
+> **Building from source on platforms other than Linux is not tested.**
 
 ## Editor Support
 
