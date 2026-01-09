@@ -48,7 +48,7 @@ fn todo() {
         } else if (cmd == "done") {
             io.clear();
             io.println("Mark task completed:");
-            const var index = number(io.input("(task:id)> ")); // task index
+            const var index = Number(io.input("(task:id)> ")); // task index
             const var keys = tasks.keys();
             io.println(keys[index]);
             tasks[keys[index]] = true;

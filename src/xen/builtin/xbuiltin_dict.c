@@ -75,7 +75,7 @@ xen_value xen_dict_clear(i32 argc, xen_value* argv) {
 }
 
 xen_obj_namespace* xen_builtin_dict() {
-    xen_obj_namespace* dict = xen_obj_namespace_new("dict");
+    xen_obj_namespace* dict = xen_obj_namespace_new("dictionary");
     xen_obj_namespace_set(dict, "len", OBJ_VAL(xen_obj_native_func_new(xen_dict_len, "len")));
     xen_obj_namespace_set(dict, "keys", OBJ_VAL(xen_obj_native_func_new(xen_dict_keys, "keys")));
     xen_obj_namespace_set(dict, "values", OBJ_VAL(xen_obj_native_func_new(xen_dict_values, "values")));

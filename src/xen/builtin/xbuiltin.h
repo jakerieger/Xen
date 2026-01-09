@@ -24,7 +24,7 @@ static const char* xen_builtin_namespaces[] = {
   "string",
   "datetime",
   "array",
-  "dict",
+  "dictionary",
   "os",
   "net",
   NULL,  // sentinel

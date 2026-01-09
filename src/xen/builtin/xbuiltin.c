@@ -33,7 +33,7 @@ void xen_builtins_register() {
     xen_vm_register_namespace("datetime", OBJ_VAL(xen_builtin_datetime()));
     xen_vm_register_namespace("array", OBJ_VAL(xen_builtin_array()));
     xen_vm_register_namespace("os", OBJ_VAL(xen_builtin_os()));
-    xen_vm_register_namespace("dict", OBJ_VAL(xen_builtin_dict()));
+    xen_vm_register_namespace("dictionary", OBJ_VAL(xen_builtin_dict()));
     xen_vm_register_namespace("net", OBJ_VAL(xen_builtin_net()));
 
     // register globals
@@ -45,7 +45,7 @@ void xen_builtins_register() {
     define_native_fn("String", xen_builtin_string_ctor);
     define_native_fn("Bool", xen_builtin_bool_ctor);
     define_native_fn("Array", xen_builtin_array_ctor);
-    define_native_fn("Dict", xen_builtin_dict_ctor);
+    define_native_fn("Dictionary", xen_builtin_dict_ctor);
     define_native_fn("U8IntArray", xen_builtin_u8array_ctor);
 }
 
