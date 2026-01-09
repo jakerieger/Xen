@@ -12,7 +12,9 @@
 
 Xen is a loosely-typed, imperative scripting language written in C. Its syntax closely resembles C-like languages and the interpreter itself is a mere 120 Kb in size. Its primary purpose is to serve as a learning project for myself and a fun side project to work on in my free time. **It is not designed with the intent of being a serious, production-ready language.**
 
-![](docs/demo.gif)
+<p align="center">
+    <img src="docs/demo.gif"/>
+</p>
 
 ## Getting Started
 
@@ -49,6 +51,13 @@ If you just want to run Xen immediately after building it, you can use the `run.
 ```
 $ ./run.sh <platform> <config> [args for Xen...]
 ```
+
+## Editor Support
+
+While an LSP is still in development, there are syntax highlighting support extensions for both VS Code and Neovim:
+
+- [Download (VS Code)](https://github.com/XenLanguage/Xen-VSCode)
+- [Download (Neovim)](https://github.com/XenLanguage/Xen-Neovim)
 
 ## Examples
 
