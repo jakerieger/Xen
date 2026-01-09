@@ -14,7 +14,7 @@ void xen_table_free(xen_table* table) {
     xen_table_init(table);
 }
 
-static xen_table_entry* find_entry(xen_table_entry* entries, i32 capacity, xen_obj_str* key) {
+static xen_table_entry* find_entry(array(xen_table_entry) entries, i32 capacity, xen_obj_str* key) {
     u32 index                  = key->hash % capacity;
     xen_table_entry* tombstone = NULL;
 

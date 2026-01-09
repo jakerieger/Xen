@@ -17,7 +17,7 @@ struct xen_table_entry {
 typedef struct {
     u64 count;
     u64 capacity;
-    xen_table_entry* entries;
+    array(xen_table_entry) entries;
 } xen_table;
 
 void xen_table_init(xen_table* table);

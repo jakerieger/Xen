@@ -14,7 +14,7 @@
 typedef struct {
     xen_obj_func* fn;
     u8* ip;
-    xen_value* slots;  // Points into VM's value stack
+    array(xen_value) slots;  // Points into VM's value stack
 } xen_call_frame;
 
 typedef struct {
@@ -30,7 +30,7 @@ typedef struct {
     xen_table globals;
     xen_table const_globals;
     xen_table namespace_registry;
-    xen_obj* objects;
+    array(xen_obj) objects;
 } xen_vm;
 
 typedef enum {

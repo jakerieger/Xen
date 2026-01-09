@@ -31,7 +31,7 @@ inline static void define_native_fn(const char* name, xen_native_fn fn) {
 }
 
 // type constructors
-inline static xen_value xen_builtin_number_ctor(i32 argc, xen_value* argv) {
+inline static xen_value xen_builtin_number_ctor(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("construct_from", 0, TYPEID_UNDEFINED);
     xen_value val = argv[0];
     switch (val.type) {
@@ -57,7 +57,7 @@ inline static xen_value xen_builtin_number_ctor(i32 argc, xen_value* argv) {
     return NULL_VAL;
 }
 
-inline static xen_value xen_builtin_string_ctor(i32 argc, xen_value* argv) {
+inline static xen_value xen_builtin_string_ctor(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("construct_from", 0, TYPEID_UNDEFINED);
     xen_value val = argv[0];
     switch (val.type) {
@@ -84,7 +84,7 @@ inline static xen_value xen_builtin_string_ctor(i32 argc, xen_value* argv) {
     return OBJ_VAL(xen_obj_str_copy(obj_str, strlen(obj_str)));
 }
 
-inline static xen_value xen_builtin_bool_ctor(i32 argc, xen_value* argv) {
+inline static xen_value xen_builtin_bool_ctor(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("construct_from", 0, TYPEID_UNDEFINED);
     xen_value val = argv[0];
     switch (val.type) {
@@ -108,7 +108,7 @@ inline static xen_value xen_builtin_bool_ctor(i32 argc, xen_value* argv) {
 }
 
 // signature: (number of elements, default value (or null if missing))
-inline static xen_value xen_builtin_array_ctor(i32 argc, xen_value* argv) {
+inline static xen_value xen_builtin_array_ctor(i32 argc, array(xen_value) argv) {
     if (argc > 2) {
         xen_runtime_error("array constructor has invalid number of arguments");
         return NULL_VAL;
@@ -133,7 +133,7 @@ inline static xen_value xen_builtin_array_ctor(i32 argc, xen_value* argv) {
 }
 
 // signature: (number of elements, default value (or null if missing)) -> U8IntArray
-inline static xen_value xen_builtin_u8array_ctor(i32 argc, xen_value* argv) {
+inline static xen_value xen_builtin_u8array_ctor(i32 argc, array(xen_value) argv) {
     if (argc > 2) {
         xen_runtime_error("U8IntArrray constructor has invalid number of arguments");
         return NULL_VAL;
@@ -158,7 +158,7 @@ inline static xen_value xen_builtin_u8array_ctor(i32 argc, xen_value* argv) {
 }
 
 // signature: () -> empty dictionary
-inline static xen_value xen_builtin_dict_ctor(i32 argc, xen_value* argv) {
+inline static xen_value xen_builtin_dict_ctor(i32 argc, array(xen_value) argv) {
     return OBJ_VAL(xen_obj_dict_new());
 }
 

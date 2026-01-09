@@ -8,7 +8,7 @@
 #include <ctype.h>
 #include <time.h>
 
-static xen_value xen_builtin_typeof(i32 argc, xen_value* argv) {
+static xen_value xen_builtin_typeof(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("type", 0, TYPEID_UNDEFINED);
     xen_value val        = argv[0];
     i32 typeid           = xen_typeid_get(val);
@@ -17,7 +17,7 @@ static xen_value xen_builtin_typeof(i32 argc, xen_value* argv) {
     return OBJ_VAL(xen_obj_str_copy(type_str, strlen(type_str)));
 }
 
-static xen_value xen_builtin_typeid(i32 argc, xen_value* argv) {
+static xen_value xen_builtin_typeid(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("type", 0, TYPEID_UNDEFINED);
     xen_value val = argv[0];
     i32 typeid    = xen_typeid_get(val);

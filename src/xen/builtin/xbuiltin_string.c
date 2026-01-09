@@ -8,13 +8,13 @@
 
 #include <ctype.h>
 
-xen_value xen_str_len(i32 argc, xen_value* argv) {
+xen_value xen_str_len(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_STRING(argv[0]))
         return NULL_VAL;
     return NUMBER_VAL(OBJ_AS_STRING(argv[0])->length);
 }
 
-xen_value xen_str_upper(i32 argc, xen_value* argv) {
+xen_value xen_str_upper(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_STRING(argv[0]))
         return NULL_VAL;
     xen_obj_str* str = OBJ_AS_STRING(argv[0]);
@@ -26,7 +26,7 @@ xen_value xen_str_upper(i32 argc, xen_value* argv) {
     return OBJ_VAL(xen_obj_str_take(buffer, str->length));
 }
 
-xen_value xen_str_lower(i32 argc, xen_value* argv) {
+xen_value xen_str_lower(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_STRING(argv[0]))
         return NULL_VAL;
     xen_obj_str* str = OBJ_AS_STRING(argv[0]);
@@ -38,7 +38,7 @@ xen_value xen_str_lower(i32 argc, xen_value* argv) {
     return OBJ_VAL(xen_obj_str_take(buffer, str->length));
 }
 
-xen_value xen_str_trim(i32 argc, xen_value* argv) {
+xen_value xen_str_trim(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_STRING(argv[0]))
         return NULL_VAL;
     xen_obj_str* str = OBJ_AS_STRING(argv[0]);
@@ -55,7 +55,7 @@ xen_value xen_str_trim(i32 argc, xen_value* argv) {
     return OBJ_VAL(xen_obj_str_copy(start, new_len));
 }
 
-xen_value xen_str_contains(i32 argc, xen_value* argv) {
+xen_value xen_str_contains(i32 argc, array(xen_value) argv) {
     if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]))
         return BOOL_VAL(XEN_FALSE);
     xen_obj_str* haystack = OBJ_AS_STRING(argv[0]);
@@ -63,7 +63,7 @@ xen_value xen_str_contains(i32 argc, xen_value* argv) {
     return BOOL_VAL(strstr(haystack->str, needle->str) != NULL);
 }
 
-xen_value xen_str_starts_with(i32 argc, xen_value* argv) {
+xen_value xen_str_starts_with(i32 argc, array(xen_value) argv) {
     if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]))
         return BOOL_VAL(XEN_FALSE);
     xen_obj_str* str    = OBJ_AS_STRING(argv[0]);
@@ -73,7 +73,7 @@ xen_value xen_str_starts_with(i32 argc, xen_value* argv) {
     return BOOL_VAL(memcmp(str->str, prefix->str, prefix->length) == 0);
 }
 
-xen_value xen_str_ends_with(i32 argc, xen_value* argv) {
+xen_value xen_str_ends_with(i32 argc, array(xen_value) argv) {
     if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]))
         return BOOL_VAL(XEN_FALSE);
     xen_obj_str* str    = OBJ_AS_STRING(argv[0]);
@@ -84,7 +84,7 @@ xen_value xen_str_ends_with(i32 argc, xen_value* argv) {
     return BOOL_VAL(memcmp(start, suffix->str, suffix->length) == 0);
 }
 
-xen_value xen_str_substr(i32 argc, xen_value* argv) {
+xen_value xen_str_substr(i32 argc, array(xen_value) argv) {
     if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !VAL_IS_NUMBER(argv[1]))
         return NULL_VAL;
 
@@ -102,7 +102,7 @@ xen_value xen_str_substr(i32 argc, xen_value* argv) {
     return OBJ_VAL(xen_obj_str_copy(str->str + start, len));
 }
 
-xen_value xen_str_find(i32 argc, xen_value* argv) {
+xen_value xen_str_find(i32 argc, array(xen_value) argv) {
     if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]))
         return NUMBER_VAL(-1);
 
@@ -116,7 +116,7 @@ xen_value xen_str_find(i32 argc, xen_value* argv) {
     return NUMBER_VAL(-1);
 }
 
-xen_value xen_str_split(i32 argc, xen_value* argv) {
+xen_value xen_str_split(i32 argc, array(xen_value) argv) {
     if (argc < 2 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]))
         return NULL_VAL;
 
@@ -149,7 +149,7 @@ xen_value xen_str_split(i32 argc, xen_value* argv) {
     return OBJ_VAL(result);
 }
 
-xen_value xen_str_replace(i32 argc, xen_value* argv) {
+xen_value xen_str_replace(i32 argc, array(xen_value) argv) {
     if (argc < 3 || !OBJ_IS_STRING(argv[0]) || !OBJ_IS_STRING(argv[1]) || !OBJ_IS_STRING(argv[2]))
         return argv[0];
 

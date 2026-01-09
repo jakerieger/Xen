@@ -16,7 +16,7 @@ struct xen_obj_class {
     xen_obj obj;
     xen_obj_str* name;
 
-    xen_property_def* properties;
+    array(xen_property_def) properties;
     i32 property_count;
     i32 property_capacity;
 

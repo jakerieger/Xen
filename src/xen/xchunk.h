@@ -52,7 +52,7 @@ typedef struct {
     u64 count;
     u64 capacity;
     u8* code;
-    u64* lines;
+    array(u64) lines;
     xen_value_array constants;
 } xen_chunk;
 

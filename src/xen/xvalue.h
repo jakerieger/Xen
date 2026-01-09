@@ -42,7 +42,7 @@ typedef struct {
 typedef struct {
     u64 cap;
     u64 count;
-    xen_value* values;
+    array(xen_value) values;
 } xen_value_array;
 
 #define VAL_IS_BOOL(v) ((v).type == VAL_BOOL)

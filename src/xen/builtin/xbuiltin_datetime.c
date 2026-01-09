@@ -8,13 +8,13 @@
 
 #include <time.h>
 
-static xen_value time_now(i32 argc, xen_value* argv) {
+static xen_value time_now(i32 argc, array(xen_value) argv) {
     XEN_UNUSED(argc);
     XEN_UNUSED(argv);
     return NUMBER_VAL((f64)time(NULL));
 }
 
-static xen_value time_clock(i32 argc, xen_value* argv) {
+static xen_value time_clock(i32 argc, array(xen_value) argv) {
     XEN_UNUSED(argc);
     XEN_UNUSED(argv);
     return NUMBER_VAL((f64)clock() / CLOCKS_PER_SEC);

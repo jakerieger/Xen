@@ -23,7 +23,7 @@
     #include <unistd.h>
 #endif
 
-static xen_value os_readtxt(i32 argc, xen_value* argv) {
+static xen_value os_readtxt(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("filename", 0, TYPEID_STRING);
     xen_value val = argv[0];
 
@@ -52,7 +52,7 @@ static xen_value os_readtxt(i32 argc, xen_value* argv) {
     }
 }
 
-static xen_value os_readlines(i32 argc, xen_value* argv) {
+static xen_value os_readlines(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("filename", 0, TYPEID_STRING);
     xen_value val = argv[0];
 
@@ -80,7 +80,7 @@ static xen_value os_readlines(i32 argc, xen_value* argv) {
     }
 }
 
-static xen_value os_readbytes(i32 argc, xen_value* argv) {
+static xen_value os_readbytes(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("filename", 0, TYPEID_STRING);
     xen_value val = argv[0];
 
@@ -130,7 +130,7 @@ static xen_value os_readbytes(i32 argc, xen_value* argv) {
     }
 }
 
-static xen_value os_exit(i32 argc, xen_value* argv) {
+static xen_value os_exit(i32 argc, array(xen_value) argv) {
     i32 exit_code = 0;
     if (argc > 0 && VAL_IS_NUMBER(argv[0]))
         exit_code = (i32)VAL_AS_NUMBER(argv[0]);
@@ -144,7 +144,7 @@ static xen_value os_exit(i32 argc, xen_value* argv) {
 // Signature:
 // os.exec( cmd, argv[] ) -> exit_code
 // TODO: This uses system and is quite unsafe, need to refactor to use fork instead
-static xen_value os_exec(i32 argc, xen_value* argv) {
+static xen_value os_exec(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("cmd", 0, TYPEID_STRING);
     xen_obj_str* cmd = OBJ_AS_STRING(argv[0]);
 
@@ -268,7 +268,7 @@ static bool is_file(const char* path) {
 // * dir: string
 // * should_overwrite: bool
 // fn mkdir(dir, should_overwrite) -> success: true, fail: false
-static xen_value os_mkdir(int argc, xen_value* argv) {
+static xen_value os_mkdir(int argc, array(xen_value) argv) {
     REQUIRE_ARG("dir", 0, TYPEID_STRING);
     const char* dir = OBJ_AS_CSTRING(argv[0]);
 
@@ -308,7 +308,7 @@ static xen_value os_mkdir(int argc, xen_value* argv) {
 // * dir: string
 // * recursive: bool
 // fn rmdir(dir, recursive) -> success: true, fail: false
-static xen_value os_rmdir(int argc, xen_value* argv) {
+static xen_value os_rmdir(int argc, array(xen_value) argv) {
     REQUIRE_ARG("dir", 0, TYPEID_STRING);
     const char* dir = OBJ_AS_CSTRING(argv[0]);
 
@@ -329,7 +329,7 @@ static xen_value os_rmdir(int argc, xen_value* argv) {
 // Signature:
 // * filename: string
 // fn rm(filename) -> success: true, fail: false
-static xen_value os_rm(i32 argc, xen_value* argv) {
+static xen_value os_rm(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("filename", 0, TYPEID_STRING);
     const char* filename = OBJ_AS_CSTRING(argv[0]);
 
@@ -354,7 +354,7 @@ static xen_value os_rm(i32 argc, xen_value* argv) {
 // Signature:
 // * path: string (file or directory)
 // fn exists(dir, recursive) -> bool
-static xen_value os_exists(i32 argc, xen_value* argv) {
+static xen_value os_exists(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("path", 0, TYPEID_STRING);
     return BOOL_VAL(path_exists(OBJ_AS_CSTRING(argv[0])));
 }
@@ -362,7 +362,7 @@ static xen_value os_exists(i32 argc, xen_value* argv) {
 // Signature:
 // * duration: number (in seconds) :
 // fn sleep(duration) -> error: null | number (duration slept)
-static xen_value os_sleep(i32 argc, xen_value* argv) {
+static xen_value os_sleep(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("duration", 0, TYPEID_NUMBER);
     u32 duration = (u32)VAL_AS_NUMBER(argv[0]);
     sleep(duration);

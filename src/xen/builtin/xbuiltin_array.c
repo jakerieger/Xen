@@ -6,13 +6,13 @@
 #include "../object/xobj_namespace.h"
 #include "../object/xobj_native_function.h"
 
-xen_value xen_arr_len(i32 argc, xen_value* argv) {
+xen_value xen_arr_len(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NUMBER_VAL(-1);
     return NUMBER_VAL(OBJ_AS_ARRAY(argv[0])->array.count);
 }
 
-xen_value xen_arr_push(i32 argc, xen_value* argv) {
+xen_value xen_arr_push(i32 argc, array(xen_value) argv) {
     if (argc < 2 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
     xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
@@ -22,13 +22,13 @@ xen_value xen_arr_push(i32 argc, xen_value* argv) {
     return NUMBER_VAL(arr->array.count);
 }
 
-xen_value xen_arr_pop(i32 argc, xen_value* argv) {
+xen_value xen_arr_pop(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
     return xen_obj_array_pop(OBJ_AS_ARRAY(argv[0]));
 }
 
-xen_value xen_arr_first(i32 argc, xen_value* argv) {
+xen_value xen_arr_first(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
     xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
@@ -37,7 +37,7 @@ xen_value xen_arr_first(i32 argc, xen_value* argv) {
     return arr->array.values[0];
 }
 
-xen_value xen_arr_last(i32 argc, xen_value* argv) {
+xen_value xen_arr_last(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
     xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
@@ -46,14 +46,14 @@ xen_value xen_arr_last(i32 argc, xen_value* argv) {
     return arr->array.values[arr->array.count - 1];
 }
 
-xen_value xen_arr_clear(i32 argc, xen_value* argv) {
+xen_value xen_arr_clear(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
     OBJ_AS_ARRAY(argv[0])->array.count = 0;
     return NULL_VAL;
 }
 
-xen_value xen_arr_contains(i32 argc, xen_value* argv) {
+xen_value xen_arr_contains(i32 argc, array(xen_value) argv) {
     if (argc < 2 || !OBJ_IS_ARRAY(argv[0]))
         return BOOL_VAL(XEN_FALSE);
     xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
@@ -66,7 +66,7 @@ xen_value xen_arr_contains(i32 argc, xen_value* argv) {
     return BOOL_VAL(XEN_FALSE);
 }
 
-xen_value xen_arr_index_of(i32 argc, xen_value* argv) {
+xen_value xen_arr_index_of(i32 argc, array(xen_value) argv) {
     if (argc < 2 || !OBJ_IS_ARRAY(argv[0]))
         return NUMBER_VAL(-1);
     xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
@@ -79,7 +79,7 @@ xen_value xen_arr_index_of(i32 argc, xen_value* argv) {
     return NUMBER_VAL(-1);
 }
 
-xen_value xen_arr_reverse(i32 argc, xen_value* argv) {
+xen_value xen_arr_reverse(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
     xen_obj_array* arr = OBJ_AS_ARRAY(argv[0]);
@@ -92,7 +92,7 @@ xen_value xen_arr_reverse(i32 argc, xen_value* argv) {
     return argv[0];
 }
 
-xen_value xen_arr_join(i32 argc, xen_value* argv) {
+xen_value xen_arr_join(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_ARRAY(argv[0]))
         return NULL_VAL;
 

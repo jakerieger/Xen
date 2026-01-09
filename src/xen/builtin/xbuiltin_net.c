@@ -94,31 +94,31 @@ static ssize_t socket_write(socket_t fd, const void* buffer, size_t size) {
 //==============================================================//
 
 // Native initializer: init(fd, remote_addr, remote_port)
-static xen_value tcp_stream_init(i32 argc, xen_value* args) {
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+static xen_value tcp_stream_init(i32 argc, array(xen_value) argv) {
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
 
-    if (argc < 2 || !VAL_IS_NUMBER(args[1])) {
+    if (argc < 2 || !VAL_IS_NUMBER(argv[1])) {
         xen_runtime_error("TcpStream requires a socket file descriptor");
         return NULL_VAL;
     }
 
-    socket_t fd = (socket_t)VAL_AS_NUMBER(args[1]);
+    socket_t fd = (socket_t)VAL_AS_NUMBER(argv[1]);
 
     // Set properties (fd=0, remote_addr=1, remote_port=2)
     self->fields[0] = NUMBER_VAL((double)fd);
-    self->fields[1] = argc > 2 ? args[2] : NULL_VAL;       // remote_addr
-    self->fields[2] = argc > 3 ? args[3] : NUMBER_VAL(0);  // remote_port
+    self->fields[1] = argc > 2 ? argv[2] : NULL_VAL;       // remote_addr
+    self->fields[2] = argc > 3 ? argv[3] : NUMBER_VAL(0);  // remote_port
 
     return OBJ_VAL(self);
 }
 
 // Method: read(max_bytes = 4096) -> returns string or null on error/EOF
-static xen_value tcp_stream_read(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
+static xen_value tcp_stream_read(i32 argc, array(xen_value) argv) {
+    if (argc < 1 || !OBJ_IS_INSTANCE(argv[0])) {
         return NULL_VAL;
     }
 
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
     socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
     if (fd == INVALID_SOCKET_FD) {
@@ -127,8 +127,8 @@ static xen_value tcp_stream_read(i32 argc, xen_value* args) {
     }
 
     i32 max_bytes = 4096;
-    if (argc > 1 && VAL_IS_NUMBER(args[1])) {
-        max_bytes = (i32)VAL_AS_NUMBER(args[1]);
+    if (argc > 1 && VAL_IS_NUMBER(argv[1])) {
+        max_bytes = (i32)VAL_AS_NUMBER(argv[1]);
         if (max_bytes < 1)
             max_bytes = 1;
         if (max_bytes > 65536)
@@ -162,12 +162,12 @@ static xen_value tcp_stream_read(i32 argc, xen_value* args) {
 }
 
 // Method: write(data) -> returns number of bytes written or -1 on error
-static xen_value tcp_stream_write(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_INSTANCE(args[0])) {
+static xen_value tcp_stream_write(i32 argc, array(xen_value) argv) {
+    if (argc < 2 || !OBJ_IS_INSTANCE(argv[0])) {
         return NUMBER_VAL(-1);
     }
 
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
     socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
     if (fd == INVALID_SOCKET_FD) {
@@ -175,12 +175,12 @@ static xen_value tcp_stream_write(i32 argc, xen_value* args) {
         return NUMBER_VAL(-1);
     }
 
-    if (!OBJ_IS_STRING(args[1])) {
+    if (!OBJ_IS_STRING(argv[1])) {
         xen_runtime_error("[TcpStream] write() requires a string argument");
         return NUMBER_VAL(-1);
     }
 
-    xen_obj_str* data = OBJ_AS_STRING(args[1]);
+    xen_obj_str* data = OBJ_AS_STRING(argv[1]);
     i32 decoded_size;
     const char* data_decoded = xen_decode_string_literal(data->str, data->length, &decoded_size);
     ssize_t bytes_written    = socket_write(fd, data_decoded, decoded_size);
@@ -194,12 +194,12 @@ static xen_value tcp_stream_write(i32 argc, xen_value* args) {
 }
 
 // Method: send(data) -> alias for write(), returns number of bytes sent
-static xen_value tcp_stream_send(i32 argc, xen_value* args) {
-    if (argc < 2 || !OBJ_IS_INSTANCE(args[0])) {
+static xen_value tcp_stream_send(i32 argc, array(xen_value) argv) {
+    if (argc < 2 || !OBJ_IS_INSTANCE(argv[0])) {
         return NUMBER_VAL(-1);
     }
 
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
     socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
     if (fd == INVALID_SOCKET_FD) {
@@ -207,12 +207,12 @@ static xen_value tcp_stream_send(i32 argc, xen_value* args) {
         return NUMBER_VAL(-1);
     }
 
-    if (!OBJ_IS_STRING(args[1])) {
+    if (!OBJ_IS_STRING(argv[1])) {
         xen_runtime_error("[TcpStream] send() requires a string argument");
         return NUMBER_VAL(-1);
     }
 
-    xen_obj_str* data = OBJ_AS_STRING(args[1]);
+    xen_obj_str* data = OBJ_AS_STRING(argv[1]);
     i32 decoded_size;
     const char* data_decoded = xen_decode_string_literal(data->str, data->length, &decoded_size);
 #ifdef PLATFORM_WINDOWS
@@ -230,12 +230,12 @@ static xen_value tcp_stream_send(i32 argc, xen_value* args) {
 }
 
 // Method: recv(max_bytes = 4096) -> alias for read()
-static xen_value tcp_stream_recv(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
+static xen_value tcp_stream_recv(i32 argc, array(xen_value) argv) {
+    if (argc < 1 || !OBJ_IS_INSTANCE(argv[0])) {
         return NULL_VAL;
     }
 
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
     socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
     if (fd == INVALID_SOCKET_FD) {
@@ -244,8 +244,8 @@ static xen_value tcp_stream_recv(i32 argc, xen_value* args) {
     }
 
     i32 max_bytes = 4096;
-    if (argc > 1 && VAL_IS_NUMBER(args[1])) {
-        max_bytes = (i32)VAL_AS_NUMBER(args[1]);
+    if (argc > 1 && VAL_IS_NUMBER(argv[1])) {
+        max_bytes = (i32)VAL_AS_NUMBER(argv[1]);
         if (max_bytes < 1)
             max_bytes = 1;
         if (max_bytes > 65536)
@@ -282,12 +282,12 @@ static xen_value tcp_stream_recv(i32 argc, xen_value* args) {
 }
 
 // Method: close()
-static xen_value tcp_stream_close(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
+static xen_value tcp_stream_close(i32 argc, array(xen_value) argv) {
+    if (argc < 1 || !OBJ_IS_INSTANCE(argv[0])) {
         return NULL_VAL;
     }
 
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
     socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
     if (fd != INVALID_SOCKET_FD) {
@@ -301,12 +301,12 @@ static xen_value tcp_stream_close(i32 argc, xen_value* args) {
 }
 
 // Method: shutdown(how = 2) -> 0=read, 1=write, 2=both
-static xen_value tcp_stream_shutdown(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
+static xen_value tcp_stream_shutdown(i32 argc, array(xen_value) argv) {
+    if (argc < 1 || !OBJ_IS_INSTANCE(argv[0])) {
         return BOOL_VAL(XEN_FALSE);
     }
 
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
     socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[0]);
 
     if (fd == INVALID_SOCKET_FD) {
@@ -315,8 +315,8 @@ static xen_value tcp_stream_shutdown(i32 argc, xen_value* args) {
     }
 
     int how = SHUTDOWN_BOTH;  // Default: shutdown both read and write
-    if (argc > 1 && VAL_IS_NUMBER(args[1])) {
-        i32 how_arg = (i32)VAL_AS_NUMBER(args[1]);
+    if (argc > 1 && VAL_IS_NUMBER(argv[1])) {
+        i32 how_arg = (i32)VAL_AS_NUMBER(argv[1]);
         if (how_arg == 0)
             how = SHUTDOWN_READ;
         else if (how_arg == 1)
@@ -364,8 +364,8 @@ static xen_obj_class* create_tcp_stream_class() {
 //==============================================================//
 
 // Native initializer: init(port)
-static xen_value tcp_listener_init(i32 argc, xen_value* args) {
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+static xen_value tcp_listener_init(i32 argc, array(xen_value) argv) {
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
 
 #ifdef PLATFORM_WINDOWS
     if (!init_winsock()) {
@@ -378,12 +378,12 @@ static xen_value tcp_listener_init(i32 argc, xen_value* args) {
         return NULL_VAL;
     }
 
-    if (!VAL_IS_NUMBER(args[1])) {
+    if (!VAL_IS_NUMBER(argv[1])) {
         xen_runtime_error("port must be a number");
         return NULL_VAL;
     }
 
-    i32 port = (i32)VAL_AS_NUMBER(args[1]);
+    i32 port = (i32)VAL_AS_NUMBER(argv[1]);
 
     // Set properties (port is index 0, _socket is index 1)
     self->fields[0] = NUMBER_VAL(port);
@@ -393,12 +393,12 @@ static xen_value tcp_listener_init(i32 argc, xen_value* args) {
 }
 
 // Method: bind()
-static xen_value tcp_listener_bind(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
+static xen_value tcp_listener_bind(i32 argc, array(xen_value) argv) {
+    if (argc < 1 || !OBJ_IS_INSTANCE(argv[0])) {
         return BOOL_VAL(XEN_FALSE);
     }
 
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
     i32 port               = (i32)VAL_AS_NUMBER(self->fields[0]);
     socket_t socket_fd     = (socket_t)VAL_AS_NUMBER(self->fields[1]);
 
@@ -444,12 +444,12 @@ static xen_value tcp_listener_bind(i32 argc, xen_value* args) {
 }
 
 // Method: listen(backlog = 5)
-static xen_value tcp_listener_listen(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
+static xen_value tcp_listener_listen(i32 argc, array(xen_value) argv) {
+    if (argc < 1 || !OBJ_IS_INSTANCE(argv[0])) {
         return BOOL_VAL(XEN_FALSE);
     }
 
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
     socket_t socket_fd     = (socket_t)VAL_AS_NUMBER(self->fields[1]);
 
     if (socket_fd == INVALID_SOCKET_FD) {
@@ -458,8 +458,8 @@ static xen_value tcp_listener_listen(i32 argc, xen_value* args) {
     }
 
     i32 backlog = 5;
-    if (argc > 1 && VAL_IS_NUMBER(args[1])) {
-        backlog = (i32)VAL_AS_NUMBER(args[1]);
+    if (argc > 1 && VAL_IS_NUMBER(argv[1])) {
+        backlog = (i32)VAL_AS_NUMBER(argv[1]);
         if (backlog < 1)
             backlog = 1;
     }
@@ -473,12 +473,12 @@ static xen_value tcp_listener_listen(i32 argc, xen_value* args) {
     return BOOL_VAL(XEN_TRUE);
 }
 
-static xen_value tcp_listener_bind_and_listen(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
+static xen_value tcp_listener_bind_and_listen(i32 argc, array(xen_value) argv) {
+    if (argc < 1 || !OBJ_IS_INSTANCE(argv[0])) {
         return NULL_VAL;
     }
 
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
     i32 port               = (i32)VAL_AS_NUMBER(self->fields[0]);
     socket_t socket_fd     = (socket_t)VAL_AS_NUMBER(self->fields[1]);
 
@@ -526,8 +526,8 @@ static xen_value tcp_listener_bind_and_listen(i32 argc, xen_value* args) {
     }
 
     i32 backlog = 5;
-    if (argc > 1 && VAL_IS_NUMBER(args[1])) {
-        backlog = (i32)VAL_AS_NUMBER(args[1]);
+    if (argc > 1 && VAL_IS_NUMBER(argv[1])) {
+        backlog = (i32)VAL_AS_NUMBER(argv[1]);
         if (backlog < 1)
             backlog = 1;
     }
@@ -542,12 +542,12 @@ static xen_value tcp_listener_bind_and_listen(i32 argc, xen_value* args) {
 }
 
 // Method: accept() -> returns TcpStream instance
-static xen_value tcp_listener_accept(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
+static xen_value tcp_listener_accept(i32 argc, array(xen_value) argv) {
+    if (argc < 1 || !OBJ_IS_INSTANCE(argv[0])) {
         return NULL_VAL;
     }
 
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
     socket_t socket_fd     = (socket_t)VAL_AS_NUMBER(self->fields[1]);
 
     if (socket_fd == INVALID_SOCKET_FD) {
@@ -592,12 +592,12 @@ static xen_value tcp_listener_accept(i32 argc, xen_value* args) {
 }
 
 // Method: close()
-static xen_value tcp_listener_close(i32 argc, xen_value* args) {
-    if (argc < 1 || !OBJ_IS_INSTANCE(args[0])) {
+static xen_value tcp_listener_close(i32 argc, array(xen_value) argv) {
+    if (argc < 1 || !OBJ_IS_INSTANCE(argv[0])) {
         return NULL_VAL;
     }
 
-    xen_obj_instance* self = OBJ_AS_INSTANCE(args[0]);
+    xen_obj_instance* self = OBJ_AS_INSTANCE(argv[0]);
     socket_t fd            = (socket_t)VAL_AS_NUMBER(self->fields[1]);
 
     if (fd != INVALID_SOCKET_FD) {

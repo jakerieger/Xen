@@ -11,7 +11,7 @@ struct xen_ns_entry {
 struct xen_obj_namespace {
     xen_obj obj;
     const char* name;
-    xen_ns_entry* entries;
+    array(xen_ns_entry) entries;
     i32 count;
     i32 capacity;
 };

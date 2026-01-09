@@ -6,14 +6,14 @@
 #include "../object/xobj_namespace.h"
 #include "../object/xobj_native_function.h"
 
-xen_value xen_dict_len(i32 argc, xen_value* argv) {
+xen_value xen_dict_len(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_DICT(argv[0]))
         return NUMBER_VAL(0);
     xen_obj_dict* dict = OBJ_AS_DICT(argv[0]);
     return NUMBER_VAL(dict->table.count);
 }
 
-xen_value xen_dict_keys(i32 argc, xen_value* argv) {
+xen_value xen_dict_keys(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_DICT(argv[0]))
         return NULL_VAL;
 
@@ -30,7 +30,7 @@ xen_value xen_dict_keys(i32 argc, xen_value* argv) {
     return OBJ_VAL(keys);
 }
 
-xen_value xen_dict_values(i32 argc, xen_value* argv) {
+xen_value xen_dict_values(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_DICT(argv[0]))
         return NULL_VAL;
 
@@ -47,7 +47,7 @@ xen_value xen_dict_values(i32 argc, xen_value* argv) {
     return OBJ_VAL(values);
 }
 
-xen_value xen_dict_has(i32 argc, xen_value* argv) {
+xen_value xen_dict_has(i32 argc, array(xen_value) argv) {
     if (argc < 2 || !OBJ_IS_DICT(argv[0]))
         return BOOL_VAL(XEN_FALSE);
 
@@ -56,7 +56,7 @@ xen_value xen_dict_has(i32 argc, xen_value* argv) {
     return BOOL_VAL(xen_obj_dict_get(dict, argv[1], &dummy));
 }
 
-xen_value xen_dict_remove(i32 argc, xen_value* argv) {
+xen_value xen_dict_remove(i32 argc, array(xen_value) argv) {
     if (argc < 2 || !OBJ_IS_DICT(argv[0]))
         return BOOL_VAL(XEN_FALSE);
 
@@ -64,7 +64,7 @@ xen_value xen_dict_remove(i32 argc, xen_value* argv) {
     return BOOL_VAL(xen_obj_dict_delete(dict, argv[1]));
 }
 
-xen_value xen_dict_clear(i32 argc, xen_value* argv) {
+xen_value xen_dict_clear(i32 argc, array(xen_value) argv) {
     if (argc < 1 || !OBJ_IS_DICT(argv[0]))
         return NULL_VAL;
 

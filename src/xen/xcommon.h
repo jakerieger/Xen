@@ -25,6 +25,8 @@ typedef float f32;
 typedef double f64;
 typedef u8 byte;
 
+#define array(type) type*
+
 #define XEN_ANY void*
 
 #define XEN_TRUE 1

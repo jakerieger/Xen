@@ -6,7 +6,7 @@
 typedef struct {
     xen_obj obj;
     xen_obj_class* class;
-    xen_value* fields;  // property values, indexed by propery_def.index
+    array(xen_value) fields;  // property values, indexed by propery_def.index
 } xen_obj_instance;
 
 #define OBJ_AS_INSTANCE(value) ((xen_obj_instance*)VAL_AS_OBJ(value))

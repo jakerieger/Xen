@@ -6,7 +6,7 @@
 #include "../object/xobj_namespace.h"
 #include "../object/xobj_native_function.h"
 
-static xen_value io_println(i32 argc, xen_value* argv) {
+static xen_value io_println(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("msg", 0, TYPEID_UNDEFINED);
     for (i32 i = 0; i < argc; i++) {
         xen_value_print(argv[i]);
@@ -15,7 +15,7 @@ static xen_value io_println(i32 argc, xen_value* argv) {
     return NULL_VAL;
 }
 
-static xen_value io_print(i32 argc, xen_value* argv) {
+static xen_value io_print(i32 argc, array(xen_value) argv) {
     REQUIRE_ARG("msg", 0, TYPEID_UNDEFINED);
     for (i32 i = 0; i < argc; i++) {
         xen_value_print(argv[i]);
@@ -23,7 +23,7 @@ static xen_value io_print(i32 argc, xen_value* argv) {
     return NULL_VAL;
 }
 
-static xen_value io_input(i32 argc, xen_value* argv) {
+static xen_value io_input(i32 argc, array(xen_value) argv) {
     bool has_prefix = (argc > 0 && argv[0].type == VAL_OBJECT && OBJ_IS_STRING(argv[0]));
     if (has_prefix)
         printf("%s", OBJ_AS_CSTRING(argv[0]));
@@ -40,14 +40,14 @@ static xen_value io_input(i32 argc, xen_value* argv) {
     return NULL_VAL;
 }
 
-static xen_value io_clear(i32 argc, xen_value* argv) {
+static xen_value io_clear(i32 argc, array(xen_value) argv) {
     XEN_UNUSED(argc);
     XEN_UNUSED(argv);
     printf("\033[2J\033[H");  // should be at least somewhat cross-platform
     return BOOL_VAL(XEN_TRUE);
 }
 
-static xen_value io_pause(i32 argc, xen_value* argv) {
+static xen_value io_pause(i32 argc, array(xen_value) argv) {
     XEN_UNUSED(argc);
     XEN_UNUSED(argv);
     int c;

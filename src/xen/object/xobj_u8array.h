@@ -5,7 +5,7 @@
 
 struct xen_obj_u8array {
     xen_obj obj;
-    u8* values;
+    array(u8) values;
     i32 count;
     i32 capacity;
 };
