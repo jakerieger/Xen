@@ -3,7 +3,4 @@
 .VSCodeCounter/
 releases/
 build/
-build.sh
-build_all.sh
-run.sh
-demo.yml
+create_release.sh
