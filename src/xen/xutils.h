@@ -180,8 +180,9 @@ inline static char* xen_decode_string_literal(const char* src, i32 src_len, i32*
         i++;
     }
 
-    dst[j]   = '\0';
-    *out_len = j;
+    dst[j] = '\0';
+    if (out_len != NULL)
+        *out_len = j;
     return dst;
 }
 

@@ -6,6 +6,7 @@
 #include "xutils.h"
 #include "xvalue.h"
 #include "xvm.h"
+#include "xutils.h"
 #include "builtin/xbuiltin.h"
 
 #define ALLOCATE_OBJ(type, obj_type) (type*)allocate_obj(sizeof(type), obj_type);
@@ -26,7 +27,8 @@ void xen_obj_print(xen_value value) {
     switch (OBJ_TYPE(value)) {
         case OBJ_STRING: {
             const char* val = OBJ_AS_CSTRING(value);
-            printf("%s", val);
+            const char* dec = xen_decode_string_literal(val, strlen(val), NULL);
+            printf("%s", dec);
         } break;
         case OBJ_FUNCTION: {
             print_function(OBJ_AS_FUNCTION(value));
