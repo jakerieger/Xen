@@ -1,7 +1,11 @@
-![](docs/Banner.png)
+# Xen
 
 <p align="center">
-    <a href="https://jakerieger.github.io/Xen/documentation.html">Documentation</a> | <a href="#getting-started">Getting Started</a> | <a href="#examples">Examples</a>
+    <img src="./docs/FileIcon.png"/>
+</p>
+
+<p align="center">
+    <a href="#getting-started">Getting Started</a> | <a href="https://xenlanguage.github.io/documentation.html">Documentation</a> | <a href="#examples">Examples</a>
 </p>
 
 ---
@@ -12,9 +16,10 @@ Xen is a loosely-typed, imperative scripting language written in C. Its syntax c
 
 ## Getting Started
 
-If you want to try Xen out, you can download a pre-compiled binaries from our [releases](https://github.com/jakerieger/Xen/releases/latest).
+If you want to try Xen out, you can download one of the pre-compiled binaries from our [releases](https://github.com/jakerieger/Xen/releases/latest).
+Xen currently has releases for Windows (x64), Linux (x64), and macOS (x64/ARM64).
 
-If you prefer to build from source the process is pretty straight-forward:
+If you prefer to build from source, the process is pretty straight-forward. Xen uses a bash script ([generate_build.sh](generate_build.sh)) to generate Ninja build files for each platform.
 
 ### 1. Clone the repository
 
@@ -32,15 +37,22 @@ $ ./generate_build.sh
 ### 3. Build
 
 ```
-$ ./build.sh <platform> # i.e. linux-debug
+$ ./build.sh <platform> <config> # i.e. linux debug
 ```
 
-The final binary will be located in the `build` directory.
+> The final binary will be located in the `build` directory.
+
+### 4. Running Xen
+
+If you just want to run Xen immediately after building it, you can use the `run.sh` script:
+
+```
+$ ./run.sh <platform> <config> [args for Xen...]
+```
 
 ## Examples
 
-Example code can be found in the [examples](examples) directory. Until documentation is completed, the [xbuiltin.c](src/xbuiltin.c) file contains
-all of the definitions for built in functions (like `os.println`);
+Example code can be found in the [examples](examples) directory. The [syntax.xen](examples/syntax.xen) file showcases the entire syntax of Xen.
 
 ## License
 
