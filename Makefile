@@ -1,4 +1,4 @@
-BUILD_TYPE ?= debug 
+BUILD_TYPE ?= debug
 TARGET_PLATFORM ?= native
 
 HOST_UNAME := $(shell uname -s)
