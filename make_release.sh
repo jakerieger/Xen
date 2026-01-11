@@ -20,7 +20,6 @@ FILE_VERSION=$(rg -oPN 'VERSION_STRING "\K[0-9]+\.[0-9]+\.[0-9]+' src/xen/xversi
 # Ensure version number in src/xen/version.h matches the provided version number
 if [ "$FILE_VERSION" = "$VERSION" ]; then
     echo "✓ Version matches: $FILE_VERSION"
-    exit 0
 else
     echo "✗ Version mismatch!"
     echo "  File version: $FILE_VERSION"
@@ -151,9 +150,7 @@ make_linux_rpm() {
     tar czf $LINUX_RPM_TAR \
         --transform "s,^,Xen-${VERSION}/," \
         --exclude='.git*' \
-        --exclude='build' \
-        --exclude='obj*' \
-        --exclude='bin*' \
+        --exclude='build*' \
         --exclude='*.tar.gz' \
         src/ examples/ Makefile \
         LICENSE README.md

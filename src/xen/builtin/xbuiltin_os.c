@@ -17,6 +17,7 @@
     #define mkdir(path, mode) _mkdir(path)
     #define rmdir(path) _rmdir(path)
     #define unlink(path) _unlink(path)
+    #define sleep(seconds) Sleep(seconds)
 #else
     #include <sys/types.h>
     #include <dirent.h>
