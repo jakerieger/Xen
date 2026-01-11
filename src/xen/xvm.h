@@ -44,5 +44,7 @@ extern xen_vm g_vm;
 void xen_vm_init(xen_vm_config config);
 void xen_vm_shutdown();
 xen_exec_result xen_vm_exec(const char* source);
+xen_exec_result xen_vm_exec_bytecode(u8* bytecode, const size_t size);
+xen_obj_func* xen_decode_bytecode(u8* bytecode, const size_t size);
 
 #endif

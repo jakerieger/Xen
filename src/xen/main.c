@@ -1,4 +1,5 @@
 #include "xcommon.h"
+#include "xerr.h"
 #include "xmem.h"
 #include "xscanner.h"
 #include "xversion.h"
@@ -175,7 +176,7 @@ static void repl() {
             history_index = -1;
         }
 
-        xen_exec_result exec_result = xen_vm_exec(line, XEN_FALSE, NULL);
+        xen_exec_result exec_result = xen_vm_exec(line);
     }
 
     xen_ring_buffer_free(line_history);
@@ -214,13 +215,13 @@ static void print_vm_config(const xen_vm_config* config) {
     printf("Stack Size    : %lu %s\n", stack_scaled, stack_oom);
 }
 
-static int execute_file(const char* filename, bool emit_bytecode, const char* bytecode_filename) {
+static int execute_file(const char* filename) {
     char* source = xen_read_file(filename);
     if (!source) {
         return XEN_FAIL;
     }
 
-    xen_exec_result exec_result = xen_vm_exec(source, emit_bytecode, bytecode_filename);
+    xen_exec_result exec_result = xen_vm_exec(source);
     free(source);
 
     if (exec_result != EXEC_OK) {
@@ -293,9 +294,9 @@ int main(int argc, char* argv[]) {
     }
 
     if (strcmp(ext, ".xen") == 0) {
-        execute_file(arg1, emit_bytecode, bytecode_filename);
-    } else if (strcmp(ext, ".xnb") == 0) {
-        execute_bytecode(arg1);
+        execute_file(arg1);
+    } else {
+        xen_panic(XEN_ERR_INVALID_ARGS, "unrecognized file type '%s' (expected .xen)", ext);
     }
 
     xen_vm_shutdown();

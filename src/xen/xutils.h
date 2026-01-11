@@ -34,6 +34,21 @@ inline static char* xen_read_file(const char* filename) {
     return buffer;
 }
 
+inline static i32 xen_write_bytes(const array(u8) bytes, size_t size, const char* filename) {
+    FILE* fp = fopen(filename, "wb");
+    if (!fp) {
+        return 0;
+    }
+
+    i32 written = fwrite(bytes, sizeof(u8), size, fp);
+    if (written <= 0) {
+        return 0;
+    }
+
+    fclose(fp);
+    return written;
+}
+
 inline static char* xen_read_line(FILE* file) {
     size_t capacity = 128;
     size_t length   = 0;

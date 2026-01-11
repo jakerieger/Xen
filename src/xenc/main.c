@@ -40,32 +40,14 @@ static bool dir_exists(const char* path) {
     return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
 }
 
-static i32 count_lines(const char* src) {
-    i32 count      = 0;
-    char last_char = '\n';
-    size_t len     = strlen(src);
-
-    for (i32 i = 0; i < (i32)len; i++) {
-        char c = src[i];
-        if (c == '\n') {
-            count++;
-        }
-        last_char = c;
-    }
-
-    if (last_char != '\n' && len > 0) {
-        count++;
-    }
-
-    return count;
-}
-
 static void generate_runner_project(const char* name, const char* source_path) {
     // Needed files:
     // - runner_dir
     //   - Makefile
     //   - runner.c
     //   - bytecode.h (compiled bytecode)
+    //
+    // Compile this generated project for the final executable
 
     char project_name[256] = {'\0'};
     snprintf(project_name, 256, "%s-build", name);
@@ -151,11 +133,18 @@ int main(i32 argc, char* argv[]) {
     xen_vm_init(config);
 
     const char* source_path = argv[1];
-    printf("Compiling: %s\n", source_path);
 
-    // Generate C runner project
-    const char* project_name = "test";
-    generate_runner_project(project_name, source_path);
+    size_t bytecode_size;
+    u8 bytecode[MAX_CODE_SIZE];
+    xenb_compile(source_path, bytecode, &bytecode_size);
+
+    xen_obj_func* decoded = xen_decode_bytecode(bytecode, bytecode_size);
+
+    // printf("Compiling: %s\n", source_path);
+
+    // // Generate C runner project
+    // const char* project_name = "test";
+    // generate_runner_project(project_name, source_path);
 
     xen_vm_shutdown();
 

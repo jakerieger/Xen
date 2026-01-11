@@ -14,7 +14,7 @@ endif
 
 ifeq ($(TARGET_PLATFORM),linux)
     export CC = gcc
-    export CFLAGS = -w -std=c11 -D_DEFAULT_SOURCE
+    export CFLAGS = -w -std=gnu11 -D_DEFAULT_SOURCE
     export LDFLAGS = -lpthread -lm -ldl
     export AR = ar
     export EXT =
@@ -23,7 +23,7 @@ endif
 
 ifeq ($(TARGET_PLATFORM),macos)
     export CC = x86_64-apple-darwin25.2-clang
-    export CFLAGS = -w -std=c11 -D_DEFAULT_SOURCE
+    export CFLAGS = -w -std=gnu11 -D_DEFAULT_SOURCE
     export LDFLAGS = -framework CoreFoundation
     export AR = x86_64-apple-darwin25.2-ar
     export EXT =
@@ -32,7 +32,7 @@ endif
 
 ifeq ($(TARGET_PLATFORM),macos-arm)
     export CC = arm64-apple-darwin25.2-clang
-    export CFLAGS = -w -std=c11 -D_DEFAULT_SOURCE
+    export CFLAGS = -w -std=gnu11 -D_DEFAULT_SOURCE
     export LDFLAGS = -framework CoreFoundation
     export AR = arm64-apple-darwin25.2-ar
     export EXT =

@@ -21,6 +21,7 @@
 #include "object/xobj_instance.h"
 #include "object/xobj_bound_method.h"
 #include "object/xobj_u8array.h"
+#include <string.h>
 
 //====================================================================================================================//
 
@@ -854,8 +855,7 @@ static xen_exec_result run() {
 #undef READ_CONSTANT
 #undef READ_STRING
 
-xen_exec_result xen_vm_exec(const char* source) {
-    xen_obj_func* fn = xen_compile(source);
+static xen_exec_result exec(xen_obj_func* fn) {
     if (fn == NULL) {
         return EXEC_COMPILE_ERROR;
     }
@@ -864,4 +864,205 @@ xen_exec_result xen_vm_exec(const char* source) {
     call(fn, 0);
 
     return run();
+}
+
+typedef struct {
+    u8 typeid;
+
+    union {
+        bool b;
+        f64 n;
+
+        struct str {
+            i32 len;
+            char* chars;
+        } str;
+    } as;
+} xen_constant_value;
+
+/*
+ * Bytecode Binary Format (.xenb):
+ *
+ * MAGIC             : 'XENB'    - 4 bytes
+ * Version           : u8        - 1 byte
+ * Lines             : u32       - 4 bytes
+ * Entrypoint Length : u32       - 4 bytes
+ * Entrypoint        : <string>  - n bytes
+ * Args Count        : u32       - 4 bytes
+ * Constants Size    : u32       - 4 bytes
+ * Constants Table   : entry[]   - n bytes
+ *   Constant Entry
+ *     Type          : u8        - 1 byte
+ *     Value Length  : u32       - 4 bytes
+ *     Value         : <any>     - n bytes
+ * Bytecode Size     : u32       - 4 bytes
+ * Bytecode          : u8[]      - n bytes
+ *
+ * ---------------------------------------
+ *
+ * Constant Entry
+ *   Type          : u8        - 1 byte
+ *   Value Length  : u32       - 4 bytes
+ *   Value         : <any>     - n bytes
+ *
+ */
+xen_obj_func* xen_decode_bytecode(u8* bytecode, const size_t size) {
+    xen_obj_func* fn = xen_obj_func_new();
+
+    i32 offset    = 0;
+    char magic[5] = {'\0'};
+    memcpy(magic, bytecode, 4);
+    if (strcmp(magic, "XENB") != 0) {
+        fprintf(stderr, "Invalid bytecode format\n");
+        return NULL;
+    }
+    offset += 4;
+
+    u8 version = 0;
+    memcpy(&version, bytecode + offset, sizeof(u8));
+    if (version != 1) {
+        fprintf(stderr, "Incorrect version: %d (expected: 1)\n", (i32)version);
+        return NULL;
+    }
+    offset += sizeof(u8);
+
+    u32 lines;
+    memcpy(&lines, bytecode + offset, sizeof(u32));
+    offset += sizeof(u32);
+
+    u32 entrypoint_length;
+    memcpy(&entrypoint_length, bytecode + offset, sizeof(u32));
+    offset += sizeof(u32);
+
+    char* entrypoint_name = (char*)malloc((entrypoint_length + 1) * sizeof(char));
+    if (!entrypoint_name) {
+        fprintf(stderr, "failed to allocate entrypoint string with length: %d\n", entrypoint_length);
+        return NULL;
+    }
+    memcpy(entrypoint_name, bytecode + offset, entrypoint_length);
+    entrypoint_name[entrypoint_length] = '\0';
+    offset += entrypoint_length;
+
+    u32 args_count;
+    memcpy(&args_count, bytecode + offset, sizeof(u32));
+    offset += sizeof(u32);
+
+    u32 constants_size;
+    memcpy(&constants_size, bytecode + offset, sizeof(u32));
+    offset += sizeof(u32);
+
+    // Read contents table
+    /*
+     * Constant Entry
+     *   Type          : u8        - 1 byte
+     *   Value Length  : u32       - 4 bytes
+     *   Value         : <any>     - n bytes
+     */
+    xen_constant_value* constants = (xen_constant_value*)malloc(constants_size);
+    for (u32 i = 0; i < constants_size; i++) {
+        // track how many bytes we've read for this entry
+        i32 read = 0;
+
+        u8 type;
+        memcpy(&type, bytecode + offset, sizeof(u8));
+        offset += sizeof(u8);
+        read += sizeof(u8);
+
+        u32 value_length;
+        memcpy(&type, bytecode + offset, sizeof(u8));
+        offset += sizeof(u8);
+        read += sizeof(u8);
+
+        switch (type) {
+            case TYPEID_BOOL: {
+                bool val;
+                memcpy(&val, bytecode + offset, sizeof(bool));
+                constants[i].typeid = type;
+                constants[i].as.b   = val;
+                offset += value_length;
+                read += value_length;
+            } break;
+            case TYPEID_NUMBER: {
+                f64 val;
+                memcpy(&val, bytecode + offset, sizeof(f64));
+                constants[i].typeid = type;
+                constants[i].as.n   = val;
+                offset += value_length;
+                read += value_length;
+            } break;
+            case TYPEID_STRING: {
+                u32 len;
+                memcpy(&len, bytecode + offset, sizeof(u32));
+                offset += sizeof(u32);
+                read += sizeof(u32);
+
+                char* val = (char*)malloc(len + 1);
+                memcpy(val, bytecode + offset, len);
+                val[len] = '\0';
+
+                constants[i].typeid       = type;
+                constants[i].as.str.len   = 0;
+                constants[i].as.str.chars = xen_strdup(val);
+                offset += value_length;
+                read += value_length;
+
+                free(val);
+            } break;
+            case TYPEID_NULL: {
+                bool val;
+                memcpy(&val, bytecode + offset, sizeof(bool));
+                constants[i].typeid = type;
+                constants[i].as.b   = val;
+                offset += value_length;
+                read += value_length;
+            } break;
+        }
+
+        // move to next entry
+        offset += read;
+    }
+
+    u32 bytecode_size;
+    memcpy(&bytecode_size, bytecode + offset, sizeof(u32));
+    offset += sizeof(u32);
+
+    u8* bytecode_bytes = NULL;
+    memcpy(bytecode_bytes, bytecode + offset, bytecode_size);
+
+    //  * MAGIC             : 'XENB'    - 4 bytes
+    //  * Version           : u8        - 1 byte
+    //  * Lines             : u32       - 4 bytes
+    //  * Entrypoint Length : u32       - 4 bytes
+    //  * Entrypoint        : <string>  - n bytes
+    //  * Args Count        : u32       - 4 bytes
+    //  * Constants Size    : u32       - 4 bytes
+    //  * Constants Table   : entry[]   - n bytes
+    //  *   Constant Entry
+    //  *     Type          : u8        - 1 byte
+    //  *     Value Length  : u32       - 4 bytes
+    //  *     Value         : <any>     - n bytes
+    //  * Bytecode Size     : u32       - 4 bytes
+    //  * Bytecode          : u8[]      - n bytes
+
+    printf("magic: %s\n", magic);
+    printf("version: %d\n", version);
+    printf("lines: %d\n", lines);
+    printf("entrypoint: %s\n", entrypoint_name);
+    printf("args count: %d\n", args_count);
+    printf("constants count: %d\n", constants_size);
+    printf("bytecode size: %d\n", bytecode_size);
+
+    free(entrypoint_name);
+
+    return fn;
+}
+
+xen_exec_result xen_vm_exec(const char* source) {
+    xen_obj_func* fn = xen_compile(source);
+    return exec(fn);
+}
+
+xen_exec_result xen_vm_exec_bytecode(u8* bytecode, const size_t size) {
+    xen_obj_func* fn = xen_decode_bytecode(bytecode, size);
+    return exec(fn);
 }

@@ -1,131 +1,271 @@
 #include "xbin_writer.h"
-#include "../xen/xerr.h"
 
-void xen_bin_writer_init(xen_bin_writer* writer, u64 capacity) {
-    if (capacity == 0) {
-        xen_panic(XEN_ERR_INVALID_ARGS, "tried to initialize writer with 0 capacity");
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
+static bool ensure_space(xen_bin_writer* writer, size_t needed) {
+    if (writer->error) {
+        return false;
     }
 
-    writer->capacity = capacity;
-    writer->consumed = 0;
-    writer->pos      = 0;
-    writer->data     = (u8*)malloc(capacity);
+    size_t required = writer->position + needed;
 
+    if (required <= writer->capacity) {
+        return true;
+    }
+
+    if (!writer->auto_grow) {
+        writer->error = true;
+        return false;
+    }
+
+    // Grow by at least 1.5x, or enough to fit the required size
+    size_t new_capacity = writer->capacity + (writer->capacity >> 1);
+    if (new_capacity < required) {
+        new_capacity = required;
+    }
+
+    // Round up to nearest power of 2 for better memory allocation
+    new_capacity--;
+    new_capacity |= new_capacity >> 1;
+    new_capacity |= new_capacity >> 2;
+    new_capacity |= new_capacity >> 4;
+    new_capacity |= new_capacity >> 8;
+    new_capacity |= new_capacity >> 16;
+    new_capacity |= new_capacity >> 32;
+    new_capacity++;
+
+    uint8_t* new_data = (uint8_t*)realloc(writer->data, new_capacity);
+    if (!new_data) {
+        writer->error = true;
+        return false;
+    }
+
+    writer->data     = new_data;
+    writer->capacity = new_capacity;
+    return true;
+}
+
+void xen_bin_writer_init(xen_bin_writer* writer, size_t capacity, bool auto_grow) {
+    assert(writer != NULL);
+    assert(capacity > 0);
+
+    writer->data = (uint8_t*)malloc(capacity);
     if (!writer->data) {
-        xen_panic(XEN_ERR_ALLOCATION_FAILED, "failed to allocate bin writer buffer");
+        writer->capacity  = 0;
+        writer->position  = 0;
+        writer->auto_grow = false;
+        writer->error     = true;
+        return;
     }
+
+    writer->capacity  = capacity;
+    writer->position  = 0;
+    writer->auto_grow = auto_grow;
+    writer->error     = false;
 }
 
 void xen_bin_writer_free(xen_bin_writer* writer) {
-    free(writer->data);
-}
-
-static void update_position_consumed(xen_bin_writer* writer, size_t size) {
-    // only update the consumed size if our position is at the end of the buffer
-    if (writer->pos == writer->consumed) {
-        writer->consumed += size;
+    if (writer && writer->data) {
+        free(writer->data);
+        writer->data     = NULL;
+        writer->capacity = 0;
+        writer->position = 0;
     }
-    writer->pos += size;
 }
 
-void xen_bin_write_bool(xen_bin_writer* writer, bool value) {
-    const size_t size = sizeof(bool);
-    memcpy(writer->data + writer->pos, &value, size);
-    update_position_consumed(writer, size);
+bool xen_bin_writer_has_error(const xen_bin_writer* writer) {
+    return writer->error;
 }
 
-void xen_bin_write_i8(xen_bin_writer* writer, i8 value) {
-    const size_t size = sizeof(i8);
-    memcpy(writer->data + writer->pos, &value, size);
-    update_position_consumed(writer, size);
+void xen_bin_writer_clear_error(xen_bin_writer* writer) {
+    writer->error = false;
 }
 
-void xen_bin_write_u8(xen_bin_writer* writer, u8 value) {
-    const size_t size = sizeof(u8);
-    memcpy(writer->data + writer->pos, &value, size);
-    update_position_consumed(writer, size);
+size_t xen_bin_writer_position(const xen_bin_writer* writer) {
+    return writer->position;
 }
 
-void xen_bin_write_i16(xen_bin_writer* writer, i16 value) {
-    const size_t size = sizeof(i16);
-    memcpy(writer->data + writer->pos, &value, size);
-    update_position_consumed(writer, size);
+size_t xen_bin_writer_size(const xen_bin_writer* writer) {
+    return writer->position;
 }
 
-void xen_bin_write_u16(xen_bin_writer* writer, u16 value) {
-    const size_t size = sizeof(u16);
-    memcpy(writer->data + writer->pos, &value, size);
-    update_position_consumed(writer, size);
+size_t xen_bin_writer_remaining(const xen_bin_writer* writer) {
+    return writer->capacity - writer->position;
 }
 
-void xen_bin_write_i32(xen_bin_writer* writer, i32 value) {
-    const size_t size = sizeof(i32);
-    memcpy(writer->data + writer->pos, &value, size);
-    update_position_consumed(writer, size);
-}
-
-void xen_bin_write_u32(xen_bin_writer* writer, u32 value) {
-    const size_t size = sizeof(u32);
-    memcpy(writer->data + writer->pos, &value, size);
-    update_position_consumed(writer, size);
-}
-
-void xen_bin_write_i64(xen_bin_writer* writer, i64 value) {
-    const size_t size = sizeof(i64);
-    memcpy(writer->data + writer->pos, &value, size);
-    update_position_consumed(writer, size);
-}
-
-void xen_bin_write_u64(xen_bin_writer* writer, u64 value) {
-    const size_t size = sizeof(u64);
-    memcpy(writer->data + writer->pos, &value, size);
-    update_position_consumed(writer, size);
-}
-
-void xen_bin_write_f32(xen_bin_writer* writer, f32 value) {
-    const size_t size = sizeof(f32);
-    memcpy(writer->data + writer->pos, &value, size);
-    update_position_consumed(writer, size);
-}
-
-void xen_bin_write_f64(xen_bin_writer* writer, f64 value) {
-    const size_t size = sizeof(f64);
-    memcpy(writer->data + writer->pos, &value, size);
-    update_position_consumed(writer, size);
-}
-
-void xen_bin_write_str(xen_bin_writer* writer, const char* value) {
-    u32 len = (u32)strlen(value);
-    // write string length first. format is len:string
-    xen_bin_write(writer, len);
-    xen_bin_write_fixed_str(writer, value, len);
-}
-
-void xen_bin_write_fixed_str(xen_bin_writer* writer, const char* value, size_t length) {
-    if (strlen(value) >= length) {
-        xen_panic(XEN_ERR_INVALID_ARGS, "provided string is longer than provided length");
+bool xen_bin_writer_seek(xen_bin_writer* writer, size_t position) {
+    if (position > writer->capacity) {
+        writer->error = true;
+        return false;
     }
-    memcpy(writer->data + writer->pos, value, length);
-    update_position_consumed(writer, length);
-}
-
-void xen_bin_write_byte_array(xen_bin_writer* writer, u8* values, size_t count) {
-    if (!values) {
-        xen_panic(XEN_ERR_INVALID_ARGS, "values ptr is NULL");
-    }
-    memcpy(writer->data + writer->pos, values, count);
-    update_position_consumed(writer, count);
-}
-
-void xen_bin_writer_seek(xen_bin_writer* writer, i32 position) {
-    writer->pos = position;
+    writer->position = position;
+    return true;
 }
 
 void xen_bin_writer_reset(xen_bin_writer* writer) {
-    free(writer->data);
-    xen_bin_writer_init(writer, writer->capacity);
+    writer->position = 0;
+    writer->error    = false;
 }
 
-void xen_bin_writer_resize(xen_bin_writer* writer, u64 new_capacity) {
-    writer->data = (u8*)realloc(writer->data, new_capacity);
+bool xen_bin_writer_reserve(xen_bin_writer* writer, size_t additional_bytes) {
+    return ensure_space(writer, additional_bytes);
+}
+
+// Write primitives with bounds checking
+bool xen_bin_write_u8(xen_bin_writer* writer, uint8_t value) {
+    if (!ensure_space(writer, sizeof(uint8_t))) {
+        return false;
+    }
+    writer->data[writer->position++] = value;
+    return true;
+}
+
+bool xen_bin_write_u16(xen_bin_writer* writer, uint16_t value) {
+    if (!ensure_space(writer, sizeof(uint16_t))) {
+        return false;
+    }
+    memcpy(writer->data + writer->position, &value, sizeof(uint16_t));
+    writer->position += sizeof(uint16_t);
+    return true;
+}
+
+bool xen_bin_write_u32(xen_bin_writer* writer, uint32_t value) {
+    if (!ensure_space(writer, sizeof(uint32_t))) {
+        return false;
+    }
+    memcpy(writer->data + writer->position, &value, sizeof(uint32_t));
+    writer->position += sizeof(uint32_t);
+    return true;
+}
+
+bool xen_bin_write_u64(xen_bin_writer* writer, uint64_t value) {
+    if (!ensure_space(writer, sizeof(uint64_t))) {
+        return false;
+    }
+    memcpy(writer->data + writer->position, &value, sizeof(uint64_t));
+    writer->position += sizeof(uint64_t);
+    return true;
+}
+
+bool xen_bin_write_i8(xen_bin_writer* writer, int8_t value) {
+    return xen_bin_write_u8(writer, (uint8_t)value);
+}
+
+bool xen_bin_write_i16(xen_bin_writer* writer, int16_t value) {
+    return xen_bin_write_u16(writer, (uint16_t)value);
+}
+
+bool xen_bin_write_i32(xen_bin_writer* writer, int32_t value) {
+    return xen_bin_write_u32(writer, (uint32_t)value);
+}
+
+bool xen_bin_write_i64(xen_bin_writer* writer, int64_t value) {
+    return xen_bin_write_u64(writer, (uint64_t)value);
+}
+
+bool xen_bin_write_f32(xen_bin_writer* writer, float value) {
+    if (!ensure_space(writer, sizeof(float))) {
+        return false;
+    }
+    memcpy(writer->data + writer->position, &value, sizeof(float));
+    writer->position += sizeof(float);
+    return true;
+}
+
+bool xen_bin_write_f64(xen_bin_writer* writer, double value) {
+    if (!ensure_space(writer, sizeof(double))) {
+        return false;
+    }
+    memcpy(writer->data + writer->position, &value, sizeof(double));
+    writer->position += sizeof(double);
+    return true;
+}
+
+bool xen_bin_write_bool(xen_bin_writer* writer, bool value) {
+    return xen_bin_write_u8(writer, value ? 1 : 0);
+}
+
+bool xen_bin_write_bytes(xen_bin_writer* writer, const void* data, size_t length) {
+    if (!data && length > 0) {
+        writer->error = true;
+        return false;
+    }
+
+    if (!ensure_space(writer, length)) {
+        return false;
+    }
+
+    memcpy(writer->data + writer->position, data, length);
+    writer->position += length;
+    return true;
+}
+
+bool xen_bin_write_string(xen_bin_writer* writer, const char* str) {
+    if (!str) {
+        writer->error = true;
+        return false;
+    }
+
+    uint32_t length = (uint32_t)strlen(str);
+
+    // Write length prefix
+    if (!xen_bin_write_u32(writer, length)) {
+        return false;
+    }
+
+    // Write string data (without null terminator)
+    return xen_bin_write_bytes(writer, str, length);
+}
+
+bool xen_bin_write_string_fixed(xen_bin_writer* writer, const char* str, size_t length) {
+    if (!str) {
+        writer->error = true;
+        return false;
+    }
+
+    if (!ensure_space(writer, length)) {
+        return false;
+    }
+
+    size_t str_len = strlen(str);
+
+    if (str_len > length) {
+        writer->error = true;
+        return false;
+    }
+
+    // Copy string
+    memcpy(writer->data + writer->position, str, str_len);
+
+    // Null-pad the rest
+    if (str_len < length) {
+        memset(writer->data + writer->position + str_len, 0, length - str_len);
+    }
+
+    writer->position += length;
+    return true;
+}
+
+size_t xen_bin_writer_align_offset(size_t offset, size_t alignment) {
+    return (offset + alignment - 1) & ~(alignment - 1);
+}
+
+bool xen_bin_write_align(xen_bin_writer* writer, size_t alignment) {
+    size_t aligned_pos = xen_bin_writer_align_offset(writer->position, alignment);
+    size_t padding     = aligned_pos - writer->position;
+
+    if (padding == 0) {
+        return true;
+    }
+
+    if (!ensure_space(writer, padding)) {
+        return false;
+    }
+
+    // Write zeros for padding
+    memset(writer->data + writer->position, 0, padding);
+    writer->position = aligned_pos;
+    return true;
 }

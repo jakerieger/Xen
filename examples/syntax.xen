@@ -9,7 +9,7 @@ include math;
 include string;
 include datetime;
 include array;
-include dict;
+include dictionary;
 include os;
 include net;
 

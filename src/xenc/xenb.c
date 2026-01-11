@@ -7,6 +7,7 @@
 #include "../xen/xchunk.h"
 #include "../xen/xutils.h"
 #include "../xen/xcompiler.h"
+#include "../xen/xtypeid.h"
 
 /*
  * Bytecode Binary Format (.xenb)
@@ -27,7 +28,7 @@
  * Bytecode          : u8[]      - n bytes
  */
 
-#define WRITE(v) xen_bin_write(&writer, v)
+#define WRITE(v) xen_bin_write(&w, v)
 
 void xenb_compile(const char* filename, u8* bytecode_out, size_t* size_out) {
     char* source     = xen_read_file(filename);
@@ -38,25 +39,25 @@ void xenb_compile(const char* filename, u8* bytecode_out, size_t* size_out) {
     }
 
     // write function metadata (constants, line count)
-    xen_bin_writer writer;
-    xen_bin_writer_init(&writer, XEN_MB(4));
+    xen_bin_writer w;
+    xen_bin_writer_init(&w, 1, true);
 
     const u8 version            = 1;
-    const u32 line_count        = (u32)*fn->chunk.lines;
+    const u32 line_count        = (u32)(*fn->chunk.lines);
     const u32 args_count        = (u32)fn->arity;
     const u32 constants_size    = (u32)fn->chunk.constants.count;
     const char* entrypoint_name = fn->name->str;
     const u32 entrypoint_length = (u32)fn->name->length;
 
-    xen_bin_write_u8(&writer, 'X');
-    xen_bin_write_u8(&writer, 'E');
-    xen_bin_write_u8(&writer, 'N');
-    xen_bin_write_u8(&writer, 'B');
-    WRITE(version);
-    WRITE(line_count);
-    xen_bin_write_fixed_str(&writer, entrypoint_name, entrypoint_length + 1);
-    WRITE(args_count);
-    WRITE(constants_size);
+    assert(WRITE((i8)'X'));
+    assert(WRITE((i8)'E'));
+    assert(WRITE((i8)'N'));
+    assert(WRITE((i8)'B'));
+    assert(WRITE(version));
+    assert(WRITE(line_count));
+    assert(WRITE(entrypoint_name));
+    assert(WRITE(args_count));
+    assert(WRITE(constants_size));
 
     /*
      * Constant Entry
@@ -66,40 +67,36 @@ void xenb_compile(const char* filename, u8* bytecode_out, size_t* size_out) {
      */
     for (int i = 0; i < fn->chunk.constants.count; i++) {
         xen_value constant = fn->chunk.constants.values[i];
-        WRITE((u8)constant.type);
-        switch (constant.type) {
-            case VAL_BOOL: {
-                WRITE((u32)sizeof(bool));
-                WRITE(constant.as.boolean);
+        u8 typeid          = (u8)xen_typeid_get(constant);
+        assert(WRITE(typeid));
+        switch (typeid) {
+            case TYPEID_BOOL: {
+                assert(WRITE((u32)sizeof(bool)));
+                assert(WRITE(constant.as.boolean));
             } break;
-            case VAL_NUMBER: {
-                WRITE((u32)sizeof(f64));
-                WRITE(constant.as.number);
+            case TYPEID_NUMBER: {
+                assert(WRITE((u32)sizeof(f64)));
+                assert(WRITE(constant.as.number));
             } break;
-            case VAL_OBJECT: {
-                if (OBJ_IS_STRING(constant)) {
-                    xen_obj_str* str = OBJ_AS_STRING(constant);
-                    WRITE((u32)str->length);
-                    xen_bin_write_fixed_str(&writer, str->str, strlen(str->str) + 1);
-                } else if (OBJ_IS_FUNCTION(constant)) {
-                    // I don't know if I need to write these or not. I don't think I do.
-                } else if (OBJ_IS_NATIVE_FUNC(constant)) {
-                }
+            case TYPEID_STRING: {
+                xen_obj_str* str = OBJ_AS_STRING(constant);
+                assert(WRITE((u32)str->length));
+                assert(WRITE(str->str));
             } break;
-            case VAL_NULL: {
-                WRITE((u32)sizeof(bool));
-                WRITE(constant.as.boolean);
+            case TYPEID_NULL: {
+                assert(WRITE((u32)sizeof(bool)));
+                assert(WRITE(constant.as.boolean));
             } break;
         }
     }
 
-    xen_bin_write_byte_array(&writer, fn->chunk.code, fn->chunk.capacity);
+    assert(xen_bin_write_bytes(&w, fn->chunk.code, fn->chunk.capacity));
 
-    *size_out = writer.consumed;
-    memcpy(bytecode_out, writer.data, writer.consumed);
+    *size_out = w.capacity;
+    memcpy(bytecode_out, w.data, w.capacity);
 
     free(source);
-    xen_bin_writer_free(&writer);
+    xen_bin_writer_free(&w);
 }
 
 #undef WRITE
