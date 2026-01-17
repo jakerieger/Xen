@@ -872,6 +872,76 @@ static xen_exec_result run() {
                 stack_push(BOOL_VAL(result));
                 break;
             }
+            case OP_CAST: {
+                // Try casting the value to a different type
+                // We'll replace the value on stack like OP_IS_TYPE
+                // If casting fails we push NULL
+
+                const char* type_name = READ_STRING()->str;
+                xen_value value       = peek(0);
+                const i32 typeid      = xen_typeid_get(value);
+
+                if (XEN_STREQ(type_name, "Number")) {
+                    if (typeid == TYPEID_BOOL) {
+                        stack_pop();
+                        stack_push(NUMBER_VAL((i32)VAL_AS_BOOL(value)));
+                    } else if (typeid == TYPEID_STRING) {
+                        const char* str = OBJ_AS_CSTRING(value);
+                        const f64 val   = strtod(str, NULL);
+                        stack_pop();
+                        stack_push(NUMBER_VAL(val));
+                    }
+
+                    break;
+                } else if (XEN_STREQ(type_name, "String")) {
+                    if (typeid == TYPEID_BOOL) {
+                        const char* val = VAL_AS_BOOL(value) ? "true" : "false";
+                        stack_pop();
+                        stack_push(OBJ_VAL(xen_obj_str_copy(val, strlen(val))));
+                    } else if (typeid == TYPEID_NUMBER) {
+                        f64 num = VAL_AS_NUMBER(value);
+                        char buffer[64];
+                        snprintf(buffer, sizeof(buffer), "%.17g", num);
+                        if (strchr(buffer, 'e') && fabs(num) < 1.0 && fabs(num) > 1e-10) {
+                            snprintf(buffer, sizeof(buffer), "%.17f", num);
+                            char* end = buffer + strlen(buffer) - 1;
+                            while (end > buffer && *end == '0')
+                                *end-- = '\0';
+                            if (end > buffer && *end == '.')
+                                *end = '\0';
+                        }
+                        stack_pop();
+                        stack_push(OBJ_VAL(xen_obj_str_copy(buffer, strlen(buffer))));
+                    }
+
+                    break;
+                } else if (XEN_STREQ(type_name, "Bool")) {
+                    if (typeid == TYPEID_STRING) {
+                        const char* str = OBJ_AS_CSTRING(value);
+                        if (XEN_STREQ(str, "true") || XEN_STREQ(str, "True")) {
+                            stack_pop();
+                            stack_push(BOOL_VAL(true));
+                        } else {
+                            stack_pop();
+                            stack_push(BOOL_VAL(false));
+                        }
+                    } else if (typeid == TYPEID_NUMBER) {
+                        f64 num = VAL_AS_NUMBER(value);
+                        if (num == 0) {
+                            stack_pop();
+                            stack_push(BOOL_VAL(false));
+                        } else {
+                            stack_pop();
+                            stack_push(BOOL_VAL(true));
+                        }
+                    }
+
+                    break;
+                }
+
+                runtime_error("Cannot cast to type '%s'", type_name);
+                return EXEC_RUNTIME_ERROR;
+            }
             default: {
                 runtime_error("unknown instruction (%d)", instruction);
             }
