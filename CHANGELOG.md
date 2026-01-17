@@ -1,6 +1,7 @@
 # Changelog
 
 ## Table of Contents
+- [v0.5.5](#v055-january-17-2026)
 - [v0.5.4](#v054-january-11-2026)
 - [v0.5.3](#v053-january-8-2026)
 - [v0.5.2](#v052-january-7-2026)
@@ -11,6 +12,16 @@
 - [v0.3.0](#v030-january-2-2026)
 - [v0.2.0](#v020-january-2-2026)
 - [v0.1.0](#v010-january-1-2026)
+
+## v0.5.5 (January 17, 2026)
+
+Xen v0.5.5 brings some new additions to the language.
+
+### Added
+- `env` namespace with `.args` (array) and `.argc` (number) members.
+- `as` keyword for casting primitive types
+- `is` keyword for type-checking values at run time
+- `Error` type
 
 ## v0.5.4 (January 11, 2026)
 
