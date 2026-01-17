@@ -1,193 +1,27 @@
-// This file showcases the entire syntax of the Xen programming language
-// All lines must end in a semicolon (except for arrow functions '=>')
-
-// TODO: Clean this up
-
-// Packages are imported like so:
 include io;
-include math;
-include string;
-include datetime;
-include array;
-include dictionary;
 include os;
 include net;
 
-// Global variables are defined like so:
-var ITERS = 10;
-
-// Loops
-for (var i = 0; i < ITERS; i++) {
-    io.println(i); // print text to console
-}
-
-// range based loop
-for (var i in 0..ITERS) {
-    io.println(i);
-}
-
-// arrays
-var items = ["apple", "banana", "orange"];
-
-// range based array iteration
-for (var i in items) {
-    io.println(i);
-}
-
-// while loop
-while (array.len(items) > 0) {
-   var item = array.pop(items);
-   io.println(item);
-}
-
-// Functions
-fn add_nums(a, b) {
-    return a + b;
-}
-
-fn add_strings(a, b) {
-    return a + b;
-}
-
-fn get_add_func(type) {
-    if (type == "number") {
-        return add_nums;
-    } else if (type == "string") {
-        return add_strings;
+fn control_flow() {
+    var bool = true;
+    if (bool) {
+        // do something
+    } else if () {
+        // do something else
     } else {
-        return null;
+        // do something else
     }
+
+    var bool_2 = false;
+    if (bool and bool_2) {}
+
+    if (bool or bool_2) {}
 }
 
-var a = 10;
-var b = 20;
-var add_fn = get_add_func(typeof(a));
-if (add_fn != null) {
-    io.println(add_fn(a, b));
-}
+fn operators() {}
 
-var str1 = "hello ";
-var str2 = "world";
-add_fn = get_add_func(typeof(str1));
-io.println(add_fn(str1, str2));
+fn loops() {}
 
-// Nested functions
-fn outer() {
-    io.println("outer");
+fn lambdas() {}
 
-    fn inner() {
-        io.println("inner");
-    }
-
-    inner();
-}
-
-outer();
-
-// Compound operators and inc/dec
-var a = 5;
-io.println("var a = ", a);
-var b = a++;  // b = 5, a = 6
-io.println("var b = a++: ", b);
-var c = ++a;  // c = 7, a = 7
-io.println("var c = ++a: ", c);
-
-var x = 10;
-io.println("var x = ", x);
-x += 5;
-io.println("x += 5: ", x);
-x -= 2;
-io.println("x -= 2: ", x);
-x *= 3;
-io.println("x *= 3: ", x);
-x /= 2;
-io.println("x /= 2: ", x);
-x %= 7;
-io.println("x %= 7: ", x);
-
-// Object methods and properties
-
-var my_string = "this is my awesome string";
-var my_substr = my_string.substr(0, 4); // "this"
-io.println("my_substr: ", my_substr);
-
-var list_one = [1,3,5,7,9];
-var list_two = [2,4,6,8,10];
-io.println(list_one);
-io.println(list_one.reverse());
-
-if (list_one.len == list_two.len) {
-    for (var i in 0..list_one.len) {
-        list_one.push(list_two[i]);
-    }
-}
-
-io.println(list_one);
-
-while (list_one.len > 0) {
-    io.print(list_one.pop());
-    if (list_one.len > 1) {
-        io.print(", ");
-    }
-}
-io.println("");
-io.println(list_one.len);
-
-// lambdas/anonymous functions
-
-var do_work = fn() {
-    for (var i in 0..ITERS) {
-        io.println(i);
-    }
-};
-
-do_work();
-
-fn exec(func, arg) => func(arg)
-const var exec_val = exec(fn(x) => ++x, 10);
-io.println(exec_val);
-
-class Employee {
-    name;
-    age;
-    gender;
-    private hire_date;
-
-    init(name, age, gender, hire_date) {
-        this.name = name;
-        this.age = age;
-        this.gender = gender;
-        this.hire_date = hire_date;
-    }
-
-    private fn is_minor() {
-        if (this.age < 18) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    fn get_hire_date() => this.hire_date
-};
-
-// Had to put this in a function because the global namespace had too many constants (max is 256)
-fn test_class() {
-    var john = new Employee("John", 34, "male", datetime.now());
-    var stacy = new Employee("Stacy", 32, "female", datetime.now());
-
-    io.println(john.name);
-    io.println(stacy.age);
-    io.println(john.gender);
-    io.println(stacy.get_hire_date());
-
-    if (john.age > 18 or stacy.age > 18) {
-        io.println("Somebody is an adult");
-    }
-
-    if (john.gender == "male" and stacy.gender == "female") {
-        io.println("Yay");
-    }
-}
-
-test_class();
+fn classes() {}

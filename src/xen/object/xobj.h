@@ -15,7 +15,8 @@ typedef enum {
     OBJ_DICT,
     OBJ_CLASS,
     OBJ_INSTANCE,
-    OBJ_U8ARRAY
+    OBJ_U8ARRAY,
+    OBJ_ERROR,
 } xen_obj_type;
 
 struct xen_obj {

@@ -11,6 +11,7 @@
 #include "../object/xobj_u8array.h"
 #include "../object/xobj_native_function.h"
 #include "../object/xobj_dict.h"
+#include "../object/xobj_error.h"
 
 #define REQUIRE_ARG(name, slot, typeid)                                                                                \
     do {                                                                                                               \
@@ -160,6 +161,11 @@ inline static xen_value xen_builtin_u8array_ctor(i32 argc, array(xen_value) argv
 // signature: () -> empty dictionary
 inline static xen_value xen_builtin_dict_ctor(i32 argc, array(xen_value) argv) {
     return OBJ_VAL(xen_obj_dict_new());
+}
+
+inline static xen_value xen_builtin_error_ctor(i32 argc, array(xen_value) argv) {
+    REQUIRE_ARG("msg", 0, TYPEID_STRING);
+    return OBJ_VAL(xen_obj_error_new(OBJ_AS_CSTRING(argv[0])));
 }
 
 #endif

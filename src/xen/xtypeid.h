@@ -17,6 +17,7 @@
 #define TYPEID_CLASS (VAL_OBJECT + OBJ_CLASS)
 #define TYPEID_INSTANCE (VAL_OBJECT + OBJ_INSTANCE)
 #define TYPEID_U8ARRAY (VAL_OBJECT + OBJ_U8ARRAY)
+#define TYPEID_ERROR (VAL_OBJECT + OBJ_ERROR)
 
 inline static i32 xen_typeid_get(xen_value value) {
     switch (value.type) {
@@ -45,9 +46,11 @@ inline static i32 xen_typeid_get(xen_value value) {
                 case OBJ_CLASS:
                     return TYPEID_CLASS;
                 case OBJ_INSTANCE:
-                    return TYPEID_NAMESPACE;
+                    return TYPEID_INSTANCE;
                 case OBJ_U8ARRAY:
                     return TYPEID_U8ARRAY;
+                case OBJ_ERROR:
+                    return TYPEID_ERROR;
             }
         }
     }
@@ -82,6 +85,8 @@ inline static const char* xen_typeid_str(i32 typeid) {
             return "Instance";
         case TYPEID_U8ARRAY:
             return "U8Array";
+        case TYPEID_ERROR:
+            return "Error";
         case TYPEID_UNDEFINED:
         default:
             return "Undefined";

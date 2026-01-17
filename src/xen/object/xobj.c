@@ -9,6 +9,7 @@
 #include "xobj_class.h"
 #include "xobj_instance.h"
 #include "xobj_u8array.h"
+#include "xobj_error.h"
 #include "../xutils.h"
 #include "../xvm.h"
 
@@ -18,7 +19,7 @@ bool xen_obj_is_type(xen_value value, xen_obj_type type) {
 
 static void print_function(xen_obj_func* fn) {
     if (fn->name == NULL) {
-        printf("<script>");
+        printf("<Script>");
         return;
     }
     printf("<Function %s>", fn->name->str);
@@ -97,6 +98,10 @@ void xen_obj_print(xen_value value) {
             printf(" ]");
             break;
         }
+        case OBJ_ERROR: {
+            printf("<Error: '%s'>", OBJ_ERROR_GET_MSG_CSTR(value));
+            break;
+        }
     }
 }
 
@@ -134,6 +139,8 @@ xen_native_fn xen_lookup_method(xen_value value, const char* name, bool* is_prop
             return lookup_in_table(k_array_methods, name, is_property);
         case OBJ_DICT:
             return lookup_in_table(k_dict_methods, name, is_property);
+        case OBJ_ERROR:
+            return lookup_in_table(k_error_methods, name, is_property);
         default:
             return NULL;
     }

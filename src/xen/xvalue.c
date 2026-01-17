@@ -129,6 +129,8 @@ void xen_value_print(xen_value value) {
     }
 }
 
+// TODO: I don't think I need this anymore. I'm not sure where it's used but I'll remove it when I find it.
+// typeid handles this as well as some other stuff so it's redundant at best.
 char* xen_value_type_to_str(xen_value value) {
     switch (value.type) {
         case VAL_BOOL:

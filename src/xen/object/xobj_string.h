@@ -14,6 +14,7 @@ struct xen_obj_str {
 #define OBJ_IS_STRING(v) xen_obj_is_type(v, OBJ_STRING)
 #define OBJ_AS_STRING(v) ((xen_obj_str*)VAL_AS_OBJ(v))
 #define OBJ_AS_CSTRING(v) (((xen_obj_str*)VAL_AS_OBJ(v))->str)
+#define EMPTY_STRING_VAL (OBJ_VAL(xen_obj_str_copy("", 0)))
 
 xen_obj_str* xen_obj_str_take(char* chars, i32 length);
 xen_obj_str* xen_obj_str_copy(const char* chars, i32 length);
