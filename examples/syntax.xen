@@ -102,3 +102,7 @@ const var johnny = new Employee("Johnny", 17, "M");
 if (johnny is Error) {
     io.println("error: ", johnny.msg());
 }
+
+// Command line arguments (only available to scripts)
+io.println(env.argc);
+io.println(env.args);

@@ -176,7 +176,7 @@ static void repl() {
             history_index = -1;
         }
 
-        xen_exec_result exec_result = xen_vm_exec(line);
+        xen_exec_result exec_result = xen_vm_exec(line, NULL, 0);
     }
 
     xen_ring_buffer_free(line_history);
@@ -215,13 +215,13 @@ static void print_vm_config(const xen_vm_config* config) {
     printf("Stack Size    : %lu %s\n", stack_scaled, stack_oom);
 }
 
-static int execute_file(const char* filename) {
+static int execute_file(const char* filename, char** args, i32 arg_count) {
     char* source = xen_read_file(filename);
     if (!source) {
         return XEN_FAIL;
     }
 
-    xen_exec_result exec_result = xen_vm_exec(source);
+    xen_exec_result exec_result = xen_vm_exec(source, args, arg_count);
     free(source);
 
     if (exec_result != EXEC_OK) {
@@ -230,16 +230,6 @@ static int execute_file(const char* filename) {
         }
     }
 
-    return XEN_OK;
-}
-
-static int execute_bytecode(const char* filename) {
-    goto not_implemented;
-
-    xen_chunk chunk = xen_read_bytecode(filename);
-
-not_implemented:
-    printf("Bytecode execution is not currently supported\n");
     return XEN_OK;
 }
 
@@ -274,19 +264,6 @@ int main(int argc, char* argv[]) {
         return XEN_OK;
     }
 
-    bool emit_bytecode      = XEN_FALSE;
-    char* bytecode_filename = NULL;
-    if (argc > 2) {
-        if (strcmp(argv[2], "--emit-bytecode") == 0) {
-            if (argc > 3) {
-                emit_bytecode     = XEN_TRUE;
-                bytecode_filename = argv[3];
-            } else {
-                xen_panic(XEN_ERR_INVALID_ARGS, "missing bytecode filename argument");
-            }
-        }
-    }
-
     // check supplied file extension so we know whether this is source or bytecode
     const char* ext = strrchr(arg1, '.');
     if (!ext) {
@@ -294,7 +271,20 @@ int main(int argc, char* argv[]) {
     }
 
     if (strcmp(ext, ".xen") == 0) {
-        execute_file(arg1);
+        // TODO: Capture remaining args and pass them to the VM so scripts can utilize them
+        // The VM is responsible for releasing them
+
+        const i32 remaining_argc = argc - 2;  // One for the current process and one for the script name
+        char** script_args       = NULL;
+        if (remaining_argc > 0) {
+            script_args = malloc(sizeof(char*) * remaining_argc);
+            for (i32 i = 2; i < argc; i++) {
+                char* arg          = argv[i];
+                script_args[i - 2] = arg;
+            }
+        }
+
+        execute_file(arg1, script_args, remaining_argc);
     } else {
         xen_panic(XEN_ERR_INVALID_ARGS, "unrecognized file type '%s' (expected .xen)", ext);
     }
